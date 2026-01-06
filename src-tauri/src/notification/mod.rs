@@ -145,12 +145,24 @@ impl NotificationManager {
         // 播放系统提示音
         #[cfg(target_os = "windows")]
         {
-            use std::io::Write;
-            // 使用 BEL 字符触发系统提示音
-            let _ = std::io::stdout().write_all(b"\x07");
-            let _ = std::io::stdout().flush();
+            self.play_notification_sound();
         }
     }
 
-
+    /// 播放系统通知音效
+    #[cfg(target_os = "windows")]
+    fn play_notification_sound(&self) {
+        use windows::Win32::Media::Audio::{PlaySoundW, SND_ALIAS, SND_ASYNC};
+        use windows::core::PCWSTR;
+        
+        // 播放系统通知音效 (SystemNotification)
+        unsafe {
+            let sound_alias = "SystemNotification\0".encode_utf16().collect::<Vec<u16>>();
+            let _ = PlaySoundW(
+                PCWSTR(sound_alias.as_ptr()),
+                None,
+                SND_ALIAS | SND_ASYNC
+            );
+        }
+    }
 }

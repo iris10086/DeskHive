@@ -236,6 +236,20 @@
                 <span class="input-unit">分钟</span>
               </div>
             </div>
+            <div class="setting-item">
+              <div>
+                <div class="setting-label">测试通知功能</div>
+                <div class="setting-description">发送一条测试通知，检查通知和音效是否正常工作</div>
+              </div>
+              <div class="setting-control">
+                <button class="test-btn" @click="testNotification">
+                  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 22C13.1 22 14 21.1 14 20H10C10 21.1 10.9 22 12 22M18 16V11C18 7.93 16.37 5.36 13.5 4.68V4C13.5 3.17 12.83 2.5 12 2.5C11.17 2.5 10.5 3.17 10.5 4V4.68C7.64 5.36 6 7.92 6 11V16L4 18V19H20V18L18 16M16 17H8V11C8 8.52 9.51 6.5 12 6.5C14.49 6.5 16 8.52 16 11V17Z" fill="currentColor"/>
+                  </svg>
+                  测试通知
+                </button>
+              </div>
+            </div>
 
           </div>
         </div>
@@ -299,7 +313,8 @@
                 <p>• 提前时间：设置提前多少分钟提醒（默认 30 分钟）</p>
                 <p>• 通知内容：显示剩余时间、任务内容、截止时间、优先级</p>
                 <p>• 通知位置：Windows 系统右下角通知中心</p>
-                <p>• 提示音：通知时播放系统提示音</p>
+                <p>• 系统音效：通知时播放 Windows 系统通知音效</p>
+                <p>• 测试功能：在"使用设置"中点击"测试通知"按钮验证功能</p>
                 <p>• 权限设置：如无通知，请检查 Windows 通知权限</p>
                 
                 <h3>⚙️ 外观设置</h3>
@@ -407,6 +422,8 @@
                 <p>• 滑块控件：使用直观的滑块拖动选择窗口尺寸</p>
                 <p>• 响应式设计：窗口内容根据尺寸自动缩放，保持视觉比例</p>
                 <p>• 点击标签切换：可直接点击档位标签快速切换尺寸</p>
+                <p>• 通知音效：任务截止时间通知添加系统音效提醒</p>
+                <p>• 测试通知按钮：在设置页面添加测试通知功能按钮</p>
                 
                 <h4>🎨 界面优化</h4>
                 <p>• 滑块样式优化：渐变色轨道，蓝色圆形按钮</p>
@@ -420,6 +437,12 @@
                 <p>• 档位3 - 中：330×520px，默认推荐</p>
                 <p>• 档位4 - 大：380×620px，大屏幕</p>
                 <p>• 档位5 - 最大：430×720px，超大屏幕</p>
+                
+                <h4>🔔 通知增强</h4>
+                <p>• 系统音效：使用 Windows API 播放系统通知音效</p>
+                <p>• 异步播放：音效异步播放，不阻塞程序运行</p>
+                <p>• 测试功能：可在设置中一键测试通知和音效</p>
+                <p>• 双重提醒：视觉通知 + 听觉音效，不易错过</p>
                 
                 <h3>v1.0.0 (2025-12-11)</h3>
                 <h4>✨ 新增功能</h4>
@@ -757,6 +780,16 @@ function openBlog() {
 // 检查新版本
 function checkUpdate() {
   window.open('https://www.feijimiao.cn/deskhive', '_blank')
+}
+
+// 测试通知
+async function testNotification() {
+  try {
+    await invoke('test_notification')
+    console.log('测试通知已发送')
+  } catch (error) {
+    console.error('发送测试通知失败:', error)
+  }
 }
 
 

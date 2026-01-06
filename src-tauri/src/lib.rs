@@ -95,6 +95,22 @@ async fn test_notification(app: tauri::AppHandle) -> Result<(), String> {
         .show()
         .map_err(|e| e.to_string())?;
     
+    // 播放系统提示音
+    #[cfg(target_os = "windows")]
+    {
+        use windows::Win32::Media::Audio::{PlaySoundW, SND_ALIAS, SND_ASYNC};
+        use windows::core::PCWSTR;
+        
+        unsafe {
+            let sound_alias = "SystemNotification\0".encode_utf16().collect::<Vec<u16>>();
+            let _ = PlaySoundW(
+                PCWSTR(sound_alias.as_ptr()),
+                None,
+                SND_ALIAS | SND_ASYNC
+            );
+        }
+    }
+    
     Ok(())
 }
 
