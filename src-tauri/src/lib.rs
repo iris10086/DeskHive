@@ -269,8 +269,27 @@ pub fn run() {
                     let window_for_settings = window.clone();
                     let opacity_value = settings.opacity;
                     let window_level = settings.window_level.clone();
+                    let window_size = settings.window_size.clone();
                     std::thread::spawn(move || {
                         std::thread::sleep(std::time::Duration::from_millis(100));
+                        
+                        // 应用窗口尺寸
+                        let (width, height) = match window_size.as_str() {
+                            "x-small" => (260, 380),  // 最小
+                            "small" => (280, 420),    // 小
+                            "medium" => (330, 520),   // 中（默认）
+                            "large" => (380, 620),    // 大
+                            "x-large" => (430, 720),  // 最大
+                            _ => (330, 520),          // 默认为中
+                        };
+                        if let Err(e) = window_for_settings.set_size(tauri::Size::Physical(tauri::PhysicalSize {
+                            width,
+                            height,
+                        })) {
+                            println!("应用启动窗口尺寸失败: {}", e);
+                        } else {
+                            println!("成功应用启动窗口尺寸: {}x{}", width, height);
+                        }
                         
                         // 应用透明度
                         if let Err(e) = window::opacity::set_window_opacity(&window_for_settings, opacity_value) {

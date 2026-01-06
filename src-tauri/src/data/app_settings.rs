@@ -52,6 +52,23 @@ pub async fn save_app_settings(app: tauri::AppHandle, settings: AppSettings) -> 
         // 设置透明度（只应用于主窗口）
         let _ = set_window_opacity(&main_window, settings.opacity);
         
+        // 应用窗口尺寸
+        let (width, height) = match settings.window_size.as_str() {
+            "x-small" => (260, 380),  // 最小
+            "small" => (280, 420),    // 小
+            "medium" => (330, 520),   // 中（默认）
+            "large" => (380, 620),    // 大
+            "x-large" => (430, 720),  // 最大
+            _ => (330, 520),          // 默认为中
+        };
+        let _ = main_window.set_size(tauri::Size::Physical(tauri::PhysicalSize {
+            width,
+            height,
+        }));
+        
+        // 通知前端窗口尺寸已更改
+        let _ = main_window.emit("window-size-changed", settings.window_size.clone());
+        
         // 设置窗口层级 - 与托盘菜单功能保持一致
         match settings.window_level.as_str() {
             "always_on_top" => {
@@ -116,6 +133,7 @@ pub async fn load_app_settings(app: tauri::AppHandle) -> Result<AppSettings, Str
             timeline_deadline_priority: true,
             enable_deadline_notification: false,
             notification_minutes_before: 30,
+            window_size: "medium".to_string(),
         });
     }
     

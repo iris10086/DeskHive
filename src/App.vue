@@ -1,5 +1,5 @@
 <template>
-  <div class="container">
+  <div class="container" :class="windowSizeClass">
     <header :data-tauri-drag-region="!isDragDisabled ? '' : null">
       <div class="header-title" :data-tauri-drag-region="!isDragDisabled ? '' : null">
         <img src="/icons/app-icon.svg" alt="DeskHive" class="app-icon">
@@ -230,6 +230,7 @@ const isDragDisabled = ref(false);
 const priorityColor = ref('#FF9800');
 const isTimelineView = ref(false);
 const timelineDeadlinePriority = ref(true);
+const windowSize = ref('medium'); // 窗口尺寸状态
 
 // 右键菜单状态
 const showContextMenu = ref(false);
@@ -269,6 +270,10 @@ const draggedTodo = ref<Todo | null>(null);
 const dragSourceGroupId = ref<string | null>(null);
 
 // 计算属性
+const windowSizeClass = computed(() => {
+  return `window-size-${windowSize.value}`;
+});
+
 const sortedGroups = computed(() => {
   return [...groups.value].sort((a, b) => a.order - b.order);
 });
@@ -1094,11 +1099,13 @@ async function loadAppSettings() {
       theme: string,
       priority_color: string,
       window_level: string,
-      timeline_deadline_priority: boolean
+      timeline_deadline_priority: boolean,
+      window_size: string
     };
     isDragDisabled.value = settings.disable_drag;
     priorityColor.value = settings.priority_color || '#FF9800';
     timelineDeadlinePriority.value = settings.timeline_deadline_priority !== undefined ? settings.timeline_deadline_priority : true;
+    windowSize.value = settings.window_size || 'medium';
     document.body.className = settings.theme === 'dark' ? 'dark-theme' : '';
   } catch (error) {
     console.error('加载应用设置失败:', error);
@@ -1228,6 +1235,11 @@ onMounted(async () => {
   const currentWindow = getCurrentWindow();
   await currentWindow.listen('drag-setting-changed', (event) => {
     isDragDisabled.value = event.payload as boolean;
+  });
+  
+  // 监听窗口尺寸变化
+  await currentWindow.listen('window-size-changed', (event) => {
+    windowSize.value = event.payload as string;
   });
 });
 
@@ -1648,6 +1660,205 @@ body.dark-theme .group-icon circle {
 
 body.dark-theme .group-icon path {
   stroke: white;
+}
+
+/* 窗口尺寸响应式样式 */
+/* 最小尺寸 (260 x 380) */
+.window-size-x-small {
+  font-size: 12px;
+}
+
+.window-size-x-small header {
+  padding: 5px 8px;
+  font-size: 0.75rem;
+  min-height: 28px;
+}
+
+.window-size-x-small .app-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.window-size-x-small .progress-indicator {
+  font-size: 0.65rem;
+  padding: 2px 5px;
+}
+
+.window-size-x-small .view-toggle-btn,
+.window-size-x-small .settings-btn {
+  width: 20px;
+  height: 20px;
+}
+
+.window-size-x-small .groups-container {
+  padding: 6px;
+}
+
+.window-size-x-small .group-header {
+  padding: 3px 6px !important;
+  min-height: 24px !important;
+}
+
+.window-size-x-small .group-name {
+  font-size: 0.7rem !important;
+}
+
+.window-size-x-small .group-count {
+  font-size: 0.55rem !important;
+  padding: 1px 4px !important;
+}
+
+.window-size-x-small .collapse-indicator {
+  font-size: 0.55rem !important;
+}
+
+/* 小尺寸 (280 x 420) */
+.window-size-small {
+  font-size: 13px;
+}
+
+.window-size-small header {
+  padding: 6px 10px;
+  font-size: 0.8rem;
+  min-height: 32px;
+}
+
+.window-size-small .app-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.window-size-small .progress-indicator {
+  font-size: 0.7rem;
+  padding: 2px 6px;
+}
+
+.window-size-small .view-toggle-btn,
+.window-size-small .settings-btn {
+  width: 22px;
+  height: 22px;
+}
+
+.window-size-small .groups-container {
+  padding: 8px;
+}
+
+.window-size-small .group-header {
+  padding: 4px 7px !important;
+  min-height: 26px !important;
+}
+
+.window-size-small .group-name {
+  font-size: 0.75rem !important;
+}
+
+.window-size-small .group-count {
+  font-size: 0.6rem !important;
+  padding: 1px 5px !important;
+}
+
+.window-size-small .collapse-indicator {
+  font-size: 0.6rem !important;
+}
+
+/* 中等尺寸 (330 x 520) - 保持默认样式 */
+
+/* 大尺寸 (380 x 620) */
+.window-size-large {
+  font-size: 15px;
+}
+
+.window-size-large header {
+  padding: 10px 14px;
+  font-size: 1rem;
+  min-height: 40px;
+}
+
+.window-size-large .app-icon {
+  width: 24px;
+  height: 24px;
+}
+
+.window-size-large .progress-indicator {
+  font-size: 0.85rem;
+  padding: 4px 9px;
+}
+
+.window-size-large .view-toggle-btn,
+.window-size-large .settings-btn {
+  width: 30px;
+  height: 30px;
+}
+
+.window-size-large .groups-container {
+  padding: 12px;
+}
+
+.window-size-large .group-header {
+  padding: 6px 11px !important;
+  min-height: 34px !important;
+}
+
+.window-size-large .group-name {
+  font-size: 0.9rem !important;
+}
+
+.window-size-large .group-count {
+  font-size: 0.75rem !important;
+  padding: 2px 8px !important;
+}
+
+.window-size-large .collapse-indicator {
+  font-size: 0.75rem !important;
+}
+
+/* 最大尺寸 (430 x 720) */
+.window-size-x-large {
+  font-size: 16px;
+}
+
+.window-size-x-large header {
+  padding: 12px 16px;
+  font-size: 1.1rem;
+  min-height: 44px;
+}
+
+.window-size-x-large .app-icon {
+  width: 28px;
+  height: 28px;
+}
+
+.window-size-x-large .progress-indicator {
+  font-size: 0.95rem;
+  padding: 5px 11px;
+}
+
+.window-size-x-large .view-toggle-btn,
+.window-size-x-large .settings-btn {
+  width: 34px;
+  height: 34px;
+}
+
+.window-size-x-large .groups-container {
+  padding: 14px;
+}
+
+.window-size-x-large .group-header {
+  padding: 7px 13px !important;
+  min-height: 38px !important;
+}
+
+.window-size-x-large .group-name {
+  font-size: 1rem !important;
+}
+
+.window-size-x-large .group-count {
+  font-size: 0.85rem !important;
+  padding: 2px 10px !important;
+}
+
+.window-size-x-large .collapse-indicator {
+  font-size: 0.85rem !important;
 }
 
 

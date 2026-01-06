@@ -32,6 +32,32 @@
           <div class="setting-group">
             <div class="setting-item">
               <div>
+                <div class="setting-label">窗口尺寸</div>
+                <div class="setting-description">拖动滑块调整窗口大小（5个档位）</div>
+              </div>
+              <div class="setting-control">
+                <div class="size-slider-container">
+                  <input 
+                    type="range" 
+                    v-model.number="windowSizeLevel" 
+                    min="1" 
+                    max="5" 
+                    step="1"
+                    class="size-slider"
+                    @input="applyWindowSize"
+                  >
+                  <div class="size-labels">
+                    <span class="size-label" :class="{ active: windowSizeLevel === 1 }" @click="windowSizeLevel = 1; applyWindowSize()">最小</span>
+                    <span class="size-label" :class="{ active: windowSizeLevel === 2 }" @click="windowSizeLevel = 2; applyWindowSize()">小</span>
+                    <span class="size-label" :class="{ active: windowSizeLevel === 3 }" @click="windowSizeLevel = 3; applyWindowSize()">中</span>
+                    <span class="size-label" :class="{ active: windowSizeLevel === 4 }" @click="windowSizeLevel = 4; applyWindowSize()">大</span>
+                    <span class="size-label" :class="{ active: windowSizeLevel === 5 }" @click="windowSizeLevel = 5; applyWindowSize()">最大</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="setting-item">
+              <div>
                 <div class="setting-label">主窗口透明度</div>
                 <div class="setting-description">调整主窗口的透明程度，不影响设置窗口</div>
               </div>
@@ -277,6 +303,7 @@
                 <p>• 权限设置：如无通知，请检查 Windows 通知权限</p>
                 
                 <h3>⚙️ 外观设置</h3>
+                <p>• 窗口尺寸：拖动滑块选择5个档位（最小、小、中、大、最大），适应不同屏幕和使用习惯</p>
                 <p>• 透明度：调整主窗口透明度（50%-100%），设置窗口保持不透明</p>
                 <p>• 主题模式：切换日间/夜间主题，夜间模式更护眼</p>
                 <p>• 优先级颜色：自定义高优先级任务的圆点颜色</p>
@@ -431,6 +458,7 @@ interface AppSettings {
   timeline_deadline_priority: boolean
   enable_deadline_notification: boolean
   notification_minutes_before: number
+  window_size: string
 }
 
 type SectionKey = 'appearance' | 'behavior' | 'tasks' | 'help' | 'contact' | 'about'
@@ -483,7 +511,8 @@ const settings = reactive<AppSettings>({
   window_level: 'always_on_bottom',
   timeline_deadline_priority: true,
   enable_deadline_notification: false,
-  notification_minutes_before: 30
+  notification_minutes_before: 30,
+  window_size: 'medium'
 })
 
 // 透明度的计算属性，确保始终为数字类型
@@ -491,6 +520,30 @@ const opacityValue = computed({
   get: () => settings.opacity,
   set: (value: string | number) => {
     settings.opacity = typeof value === 'string' ? parseFloat(value) : value
+  }
+})
+
+// 窗口尺寸档位的计算属性
+const windowSizeLevel = computed({
+  get: () => {
+    const sizeMap: Record<string, number> = {
+      'x-small': 1,
+      'small': 2,
+      'medium': 3,
+      'large': 4,
+      'x-large': 5
+    }
+    return sizeMap[settings.window_size] || 3
+  },
+  set: (level: number) => {
+    const levelMap: Record<number, string> = {
+      1: 'x-small',
+      2: 'small',
+      3: 'medium',
+      4: 'large',
+      5: 'x-large'
+    }
+    settings.window_size = levelMap[level] || 'medium'
   }
 })
 
@@ -534,11 +587,31 @@ async function applyWindowLevel() {
       auto_start: settings.auto_start,
       theme: settings.theme,
       priority_color: settings.priority_color,
-      window_level: settings.window_level
+      window_level: settings.window_level,
+      window_size: settings.window_size
     }
     await invoke('save_app_settings', { settings: tempSettings })
   } catch (error) {
     console.error('应用窗口层级失败:', error)
+  }
+}
+
+// 实时应用窗口尺寸设置
+async function applyWindowSize() {
+  try {
+    // 临时保存并应用窗口尺寸设置以实现预览
+    const tempSettings = {
+      opacity: settings.opacity,
+      disable_drag: settings.disable_drag,
+      auto_start: settings.auto_start,
+      theme: settings.theme,
+      priority_color: settings.priority_color,
+      window_level: settings.window_level,
+      window_size: settings.window_size
+    }
+    await invoke('save_app_settings', { settings: tempSettings })
+  } catch (error) {
+    console.error('应用窗口尺寸失败:', error)
   }
 }
 
@@ -569,7 +642,8 @@ async function saveSettingsImmediately() {
       enable_deadline_notification: Boolean(settings.enable_deadline_notification),
       notification_minutes_before: typeof settings.notification_minutes_before === 'string' 
         ? parseInt(settings.notification_minutes_before) 
-        : settings.notification_minutes_before
+        : settings.notification_minutes_before,
+      window_size: settings.window_size
     }
     
     // 调用 Tauri 命令保存设置
@@ -1731,5 +1805,137 @@ body.dark-theme .contact-text {
   color: #0a84ff;
   background: rgba(10, 132, 255, 0.15);
   border: 1px solid rgba(10, 132, 255, 0.3);
+}
+
+/* 窗口尺寸滑块样式 */
+.size-slider-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  max-width: 320px;
+}
+
+.size-slider {
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: linear-gradient(to right, #e5e7eb 0%, #007aff 50%, #e5e7eb 100%);
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+  margin: 10px 0; /* 增加上下边距，防止滑块按钮被裁剪 */
+}
+
+.size-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #007aff;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 122, 255, 0.4);
+  transition: all 0.2s ease;
+  margin-top: 0; /* 确保垂直居中 */
+}
+
+.size-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+  box-shadow: 0 3px 10px rgba(0, 122, 255, 0.6);
+}
+
+.size-slider::-webkit-slider-thumb:active {
+  transform: scale(1.05);
+}
+
+.size-slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #007aff;
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 2px 6px rgba(0, 122, 255, 0.4);
+  transition: all 0.2s ease;
+}
+
+.size-slider::-moz-range-thumb:hover {
+  transform: scale(1.15);
+  box-shadow: 0 3px 10px rgba(0, 122, 255, 0.6);
+}
+
+.size-slider::-moz-range-thumb:active {
+  transform: scale(1.05);
+}
+
+.size-slider::-moz-range-track {
+  background: transparent;
+  border: none;
+}
+
+.size-labels {
+  display: flex;
+  justify-content: space-between;
+  padding: 0;
+  position: relative;
+}
+
+.size-label {
+  font-size: 11px;
+  color: #6d6d70;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  user-select: none;
+  cursor: pointer;
+  flex: 1;
+  text-align: center;
+  padding: 2px 0;
+}
+
+.size-label:first-child {
+  text-align: left;
+}
+
+.size-label:last-child {
+  text-align: right;
+}
+
+.size-label.active {
+  color: #007aff;
+  font-weight: 700;
+  transform: scale(1.1);
+}
+
+/* 夜间主题下的滑块样式 */
+body.dark-theme .size-slider {
+  background: linear-gradient(to right, #2a2a2a 0%, #0a84ff 50%, #2a2a2a 100%);
+}
+
+body.dark-theme .size-slider::-webkit-slider-thumb {
+  background: #0a84ff;
+  box-shadow: 0 2px 6px rgba(10, 132, 255, 0.5);
+}
+
+body.dark-theme .size-slider::-webkit-slider-thumb:hover {
+  box-shadow: 0 3px 10px rgba(10, 132, 255, 0.7);
+}
+
+body.dark-theme .size-slider::-moz-range-thumb {
+  background: #0a84ff;
+  box-shadow: 0 2px 6px rgba(10, 132, 255, 0.5);
+}
+
+body.dark-theme .size-slider::-moz-range-thumb:hover {
+  box-shadow: 0 3px 10px rgba(10, 132, 255, 0.7);
+}
+
+body.dark-theme .size-label {
+  color: #808080;
+}
+
+body.dark-theme .size-label.active {
+  color: #0a84ff;
 }
 </style>
