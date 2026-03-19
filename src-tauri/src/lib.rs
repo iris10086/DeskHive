@@ -56,6 +56,8 @@ async fn is_dev_mode() -> Result<bool, String> {
 // Tauri 命令：退出应用
 #[tauri::command]
 async fn quit_app(app: tauri::AppHandle) -> Result<(), String> {
+    log::info!("用户请求退出应用");
+    
     // 关闭所有窗口
     if let Some(main_window) = app.get_webview_window("main") {
         let _ = main_window.close();
@@ -64,6 +66,7 @@ async fn quit_app(app: tauri::AppHandle) -> Result<(), String> {
         let _ = settings_window.close();
     }
     
+    log::info!("应用正常退出");
     // 退出应用
     app.exit(0);
     Ok(())
@@ -88,12 +91,17 @@ async fn emit_priority_color_changed(app: tauri::AppHandle, color: String) -> Re
 async fn test_notification(app: tauri::AppHandle) -> Result<(), String> {
     use tauri_plugin_notification::NotificationExt;
     
+    log::info!("测试通知功能");
+    
     app.notification()
         .builder()
         .title("DeskHive 测试通知")
         .body("通知功能正常工作！")
         .show()
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| {
+            log::error!("发送通知失败: {}", e);
+            e.to_string()
+        })?;
     
     // 播放系统提示音
     #[cfg(target_os = "windows")]
@@ -114,6 +122,68 @@ async fn test_notification(app: tauri::AppHandle) -> Result<(), String> {
     Ok(())
 }
 
+// Tauri 命令：打开日志文件
+#[tauri::command]
+async fn open_log_file(app: tauri::AppHandle) -> Result<(), String> {
+    use std::process::Command;
+    
+    let log_dir = app.path().app_log_dir().map_err(|e| {
+        log::error!("获取日志目录失败: {}", e);
+        e.to_string()
+    })?;
+    
+    log::info!("打开日志目录: {:?}", log_dir);
+    
+    // 在 Windows 上使用 explorer 打开日志目录
+    #[cfg(target_os = "windows")]
+    {
+        Command::new("explorer")
+            .arg(log_dir)
+            .spawn()
+            .map_err(|e| {
+                log::error!("打开日志目录失败: {}", e);
+                format!("无法打开日志目录: {}", e)
+            })?;
+    }
+    
+    // 在 macOS 上使用 open 命令
+    #[cfg(target_os = "macos")]
+    {
+        Command::new("open")
+            .arg(log_dir)
+            .spawn()
+            .map_err(|e| {
+                log::error!("打开日志目录失败: {}", e);
+                format!("无法打开日志目录: {}", e)
+            })?;
+    }
+    
+    // 在 Linux 上使用 xdg-open 命令
+    #[cfg(target_os = "linux")]
+    {
+        Command::new("xdg-open")
+            .arg(log_dir)
+            .spawn()
+            .map_err(|e| {
+                log::error!("打开日志目录失败: {}", e);
+                format!("无法打开日志目录: {}", e)
+            })?;
+    }
+    
+    Ok(())
+}
+
+// Tauri 命令：获取日志文件路径
+#[tauri::command]
+async fn get_log_path(app: tauri::AppHandle) -> Result<String, String> {
+    let log_dir = app.path().app_log_dir().map_err(|e| {
+        log::error!("获取日志目录失败: {}", e);
+        e.to_string()
+    })?;
+    
+    Ok(log_dir.to_string_lossy().to_string())
+}
+
 // 检查是否已经有一个实例在运行
 #[cfg(target_os = "windows")]
 fn is_single_instance() -> bool {
@@ -132,11 +202,14 @@ fn is_single_instance() -> bool {
                 let last_error = windows::Win32::Foundation::GetLastError();
                 if last_error.0 == 183 { // ERROR_ALREADY_EXISTS
                     let _ = CloseHandle(handle);
+                    log::warn!("检测到应用已在运行，退出当前实例");
                     return false; // 已经存在实例
                 }
+                log::info!("单实例检查通过");
                 true // 没有其他实例在运行
             }
-            Err(_) => {
+            Err(e) => {
+                log::error!("创建互斥锁失败: {:?}", e);
                 false // 创建互斥锁失败
             }
         }
@@ -153,6 +226,31 @@ pub fn run() {
             return;
         }
     }
+    
+    // 设置 panic hook 来记录崩溃日志
+    std::panic::set_hook(Box::new(|panic_info| {
+        let payload = panic_info.payload();
+        let message = if let Some(s) = payload.downcast_ref::<&str>() {
+            s.to_string()
+        } else if let Some(s) = payload.downcast_ref::<String>() {
+            s.clone()
+        } else {
+            "未知错误".to_string()
+        };
+        
+        let location = if let Some(location) = panic_info.location() {
+            format!("{}:{}:{}", location.file(), location.line(), location.column())
+        } else {
+            "未知位置".to_string()
+        };
+        
+        eprintln!("应用崩溃！");
+        eprintln!("错误信息: {}", message);
+        eprintln!("位置: {}", location);
+        
+        // 尝试记录到日志（如果日志系统已初始化）
+        log::error!("应用崩溃！错误: {} 位置: {}", message, location);
+    }));
     
     tauri::Builder::default()
         .plugin(tauri_plugin_notification::init())
@@ -188,17 +286,34 @@ pub fn run() {
             quit_app,
             emit_theme_changed,
             emit_priority_color_changed,
-            test_notification
+            test_notification,
+            open_log_file,
+            get_log_path
         ])
         .setup(|app| {
-            // 初始化日志系统
-            if cfg!(debug_assertions) {
-                app.handle().plugin(
-                    tauri_plugin_log::Builder::default()
-                        .level(log::LevelFilter::Info)
-                        .build(),
-                )?;
+            // 初始化日志系统 - 保存到应用数据目录
+            let log_dir = app.path().app_log_dir().expect("无法获取日志目录");
+            
+            // 确保日志目录存在
+            if !log_dir.exists() {
+                std::fs::create_dir_all(&log_dir).expect("无法创建日志目录");
             }
+            
+            // 配置日志插件
+            app.handle().plugin(
+                tauri_plugin_log::Builder::default()
+                    .level(log::LevelFilter::Info)
+                    .target(tauri_plugin_log::Target::new(
+                        tauri_plugin_log::TargetKind::LogDir { file_name: Some("deskhive".to_string()) }
+                    ))
+                    .rotation_strategy(tauri_plugin_log::RotationStrategy::KeepAll)
+                    .max_file_size(5_000_000) // 5MB
+                    .build(),
+            )?;
+            
+            // 记录应用启动日志
+            log::info!("DeskHive 应用启动");
+            log::info!("日志目录: {:?}", log_dir);
 
             // 创建系统托盘
             system::tray::create_tray(app)?;

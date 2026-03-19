@@ -410,6 +410,20 @@
                 </button>
               </div>
             </div>
+            <div class="setting-item">
+              <div>
+                <div class="setting-label">运行日志</div>
+                <div class="setting-description">查看应用运行日志和错误信息</div>
+              </div>
+              <div class="setting-control">
+                <button class="log-btn" @click="openLogFile">
+                  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M14 2H6C4.9 2 4 2.9 4 4V20C4 21.1 4.9 22 6 22H18C19.1 22 20 21.1 20 20V8L14 2M18 20H6V4H13V9H18V20M8 15.5C8 14.12 9.12 13 10.5 13S13 14.12 13 15.5C13 16.88 11.88 18 10.5 18S8 16.88 8 15.5M14 19H7V18.5C7 17.12 8.12 16 9.5 16H11.5C12.88 16 14 17.12 14 18.5V19Z" fill="currentColor"/>
+                  </svg>
+                  查看日志
+                </button>
+              </div>
+            </div>
           </div>
 
           <div class="section-title" style="margin-top: 24px;">版本更新</div>
@@ -789,6 +803,16 @@ async function testNotification() {
     console.log('测试通知已发送')
   } catch (error) {
     console.error('发送测试通知失败:', error)
+  }
+}
+
+// 打开日志文件
+async function openLogFile() {
+  try {
+    await invoke('open_log_file')
+    console.log('日志目录已打开')
+  } catch (error) {
+    console.error('打开日志目录失败:', error)
   }
 }
 
@@ -1788,6 +1812,48 @@ body.dark-theme .check-update-btn {
 body.dark-theme .check-update-btn:hover {
   background: #28a745;
   box-shadow: 0 4px 10px rgba(52, 199, 89, 0.5);
+}
+
+/* 日志按钮 */
+.log-btn {
+  padding: 6px 16px;
+  background: #5856d6;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 6px rgba(88, 86, 214, 0.3);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.log-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.log-btn:hover {
+  background: #4c4bb8;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(88, 86, 214, 0.4);
+}
+
+.log-btn:active {
+  transform: translateY(0);
+}
+
+body.dark-theme .log-btn {
+  background: #5856d6;
+  box-shadow: 0 2px 6px rgba(88, 86, 214, 0.4);
+}
+
+body.dark-theme .log-btn:hover {
+  background: #4c4bb8;
+  box-shadow: 0 4px 10px rgba(88, 86, 214, 0.5);
 }
 
 /* 第二行：二维码并排 */

@@ -29,17 +29,26 @@ pub async fn save_todo_data(app: tauri::AppHandle, pending_todos: Vec<Todo>, com
     let data_dir = get_data_dir(&app)?;
     let file_path = data_dir.join("todo_list.json");
     
+    log::info!("保存待办事项数据: 待完成={}, 已完成={}", pending_todos.len(), completed_todos.len());
+    
     let todo_data = TodoData {
         pending_todos,
         completed_todos,
     };
     
     let json_data = serde_json::to_string_pretty(&todo_data)
-        .map_err(|e| format!("序列化数据失败: {}", e))?;
+        .map_err(|e| {
+            log::error!("序列化数据失败: {}", e);
+            format!("序列化数据失败: {}", e)
+        })?;
     
     fs::write(&file_path, json_data)
-        .map_err(|e| format!("写入文件失败: {}", e))?;
+        .map_err(|e| {
+            log::error!("写入待办事项文件失败: {}", e);
+            format!("写入文件失败: {}", e)
+        })?;
     
+    log::info!("待办事项数据保存成功");
     Ok(())
 }
 
@@ -51,17 +60,29 @@ pub async fn load_todo_data(app: tauri::AppHandle) -> Result<TodoData, String> {
     
     if !file_path.exists() {
         // 如果文件不存在，返回空数据
+        log::info!("待办事项文件不存在，返回空数据");
         return Ok(TodoData {
             pending_todos: vec![],
             completed_todos: vec![],
         });
     }
     
+    log::info!("加载待办事项数据");
+    
     let json_data = fs::read_to_string(&file_path)
-        .map_err(|e| format!("读取文件失败: {}", e))?;
+        .map_err(|e| {
+            log::error!("读取待办事项文件失败: {}", e);
+            format!("读取文件失败: {}", e)
+        })?;
     
     let todo_data: TodoData = serde_json::from_str(&json_data)
-        .map_err(|e| format!("解析JSON失败: {}", e))?;
+        .map_err(|e| {
+            log::error!("解析待办事项JSON失败: {}", e);
+            format!("解析JSON失败: {}", e)
+        })?;
+    
+    log::info!("待办事项数据加载成功: 待完成={}, 已完成={}", 
+        todo_data.pending_todos.len(), todo_data.completed_todos.len());
     
     Ok(todo_data)
 }
@@ -74,57 +95,46 @@ pub async fn update_todo_text(
     is_completed: bool,
     new_text: String
 ) -> Result<(), String> {
-    println!("准备更新任务文本: id='{}', completed={}, new_text='{}'?", 
+    log::info!("更新任务文本: id='{}', completed={}, new_text='{}'", 
         todo_id, is_completed, new_text);
     
     // 先加载当前数据
     let mut todo_data = load_todo_data(app.clone()).await?;
     
-    println!("加载的数据: pending_count={}, completed_count={}", 
+    log::debug!("加载的数据: pending_count={}, completed_count={}", 
         todo_data.pending_todos.len(), todo_data.completed_todos.len());
     
     // 查找并更新对应的todo项
     let found = if is_completed {
         // 在已完成列表中查找
-        println!("在已完成列表中查找");
-        for (i, todo) in todo_data.completed_todos.iter().enumerate() {
-            println!("  [{}]: '{}' (id: {})", i, todo.text, todo.id);
-        }
+        log::debug!("在已完成列表中查找任务");
         todo_data.completed_todos.iter_mut()
             .find(|todo| todo.id == todo_id)
     } else {
         // 在待完成列表中查找
-        println!("在待完成列表中查找");
-        for (i, todo) in todo_data.pending_todos.iter().enumerate() {
-            println!("  [{}]: '{}' (id: {})", i, todo.text, todo.id);
-        }
+        log::debug!("在待完成列表中查找任务");
         todo_data.pending_todos.iter_mut()
             .find(|todo| todo.id == todo_id)
     };
     
     if let Some(todo) = found {
-        println!("找到对应的todo项，更新文本");
-        println!("更新前的文本: '{}'", todo.text);
+        log::info!("找到任务，更新文本");
+        let old_text = todo.text.clone();
         todo.text = new_text;
-        println!("更新后的文本: '{}'", todo.text);
+        
         // 保存更新后的数据
-        println!("准备保存数据到文件");
         let save_result = save_todo_data(app, todo_data.pending_todos.clone(), todo_data.completed_todos.clone()).await;
         
-        match &save_result {
-            Ok(_) => println!("数据保存成功"),
-            Err(e) => println!("数据保存失败: {}", e),
-        }
-        
         if save_result.is_err() {
+            log::error!("保存任务文本失败");
             return save_result;
         }
         
-        println!("任务文本更新成功");
+        log::info!("任务文本更新成功: '{}' -> '{}'", old_text, todo.text);
         Ok(())
     } else {
         let error_msg = format!("未找到指定的todo项: id='{}', completed={}", todo_id, is_completed);
-        println!("{}", error_msg);
+        log::error!("{}", error_msg);
         Err(error_msg)
     }
 }
@@ -137,62 +147,51 @@ pub async fn set_todo_deadline(
     is_completed: bool,
     deadline: Option<i64>
 ) -> Result<(), String> {
-    println!("准备设置截止时间: id='{}', completed={}, deadline={:?}", 
+    log::info!("设置截止时间: id='{}', completed={}, deadline={:?}", 
         todo_id, is_completed, deadline);
     
     // 先加载当前数据
     let mut todo_data = load_todo_data(app.clone()).await?;
     
-    println!("加载的数据: pending_count={}, completed_count={}", 
+    log::debug!("加载的数据: pending_count={}, completed_count={}", 
         todo_data.pending_todos.len(), todo_data.completed_todos.len());
     
     // 查找并更新对应的todo项
     let found = if is_completed {
         // 在已完成列表中查找
-        println!("在已完成列表中查找");
-        for (i, todo) in todo_data.completed_todos.iter().enumerate() {
-            println!("  [{}]: '{}' (id: {})", i, todo.text, todo.id);
-        }
+        log::debug!("在已完成列表中查找任务");
         todo_data.completed_todos.iter_mut()
             .find(|todo| todo.id == todo_id)
     } else {
         // 在待完成列表中查找
-        println!("在待完成列表中查找");
-        for (i, todo) in todo_data.pending_todos.iter().enumerate() {
-            println!("  [{}]: '{}' (id: {})", i, todo.text, todo.id);
-        }
+        log::debug!("在待完成列表中查找任务");
         todo_data.pending_todos.iter_mut()
             .find(|todo| todo.id == todo_id)
     };
     
     if let Some(todo) = found {
-        println!("找到对应的todo项，更新deadline");
-        println!("更新前的deadline: {:?}", todo.deadline);
+        log::info!("找到任务，更新截止时间");
+        let old_deadline = todo.deadline;
         todo.deadline = deadline;
-        println!("更新后的deadline: {:?}", todo.deadline);
+        
         // 保存更新后的数据
-        println!("准备保存数据到文件");
         let save_result = save_todo_data(app, todo_data.pending_todos.clone(), todo_data.completed_todos.clone()).await;
         
-        match &save_result {
-            Ok(_) => println!("数据保存成功"),
-            Err(e) => println!("数据保存失败: {}", e),
-        }
-        
         if save_result.is_err() {
+            log::error!("保存截止时间失败");
             return save_result;
         }
         
         // 根据deadline值提供不同的成功消息
         if deadline.is_some() {
-            println!("截止时间设置成功");
+            log::info!("截止时间设置成功: {:?} -> {:?}", old_deadline, deadline);
         } else {
-            println!("截止时间移除成功");
+            log::info!("截止时间移除成功");
         }
         Ok(())
     } else {
         let error_msg = format!("未找到指定的todo项: id='{}', completed={}", todo_id, is_completed);
-        println!("{}", error_msg);
+        log::error!("{}", error_msg);
         Err(error_msg)
     }
 }
@@ -203,16 +202,25 @@ pub async fn save_todo_data_with_groups(app: tauri::AppHandle, todos: Vec<Todo>)
     let data_dir = get_data_dir(&app)?;
     let file_path = data_dir.join("todos_with_groups.json");
     
+    log::info!("保存带分组的待办事项数据: 总数={}", todos.len());
+    
     let todo_data = crate::models::TodoDataWithGroups {
         todos,
     };
     
     let json_data = serde_json::to_string_pretty(&todo_data)
-        .map_err(|e| format!("序列化数据失败: {}", e))?;
+        .map_err(|e| {
+            log::error!("序列化分组数据失败: {}", e);
+            format!("序列化数据失败: {}", e)
+        })?;
     
     fs::write(&file_path, json_data)
-        .map_err(|e| format!("写入文件失败: {}", e))?;
+        .map_err(|e| {
+            log::error!("写入分组数据文件失败: {}", e);
+            format!("写入文件失败: {}", e)
+        })?;
     
+    log::info!("分组数据保存成功");
     Ok(())
 }
 
@@ -224,17 +232,27 @@ pub async fn load_todo_data_with_groups(app: tauri::AppHandle) -> Result<crate::
     
     if !file_path.exists() {
         // 如果文件不存在，返回空数据
+        log::info!("分组数据文件不存在，返回空数据");
         return Ok(crate::models::TodoDataWithGroups {
             todos: Vec::new(),
         });
     }
     
+    log::info!("加载带分组的待办事项数据");
+    
     let json_data = fs::read_to_string(&file_path)
-        .map_err(|e| format!("读取文件失败: {}", e))?;
+        .map_err(|e| {
+            log::error!("读取分组数据文件失败: {}", e);
+            format!("读取文件失败: {}", e)
+        })?;
     
     let todo_data: crate::models::TodoDataWithGroups = serde_json::from_str(&json_data)
-        .map_err(|e| format!("解析JSON失败: {}", e))?;
+        .map_err(|e| {
+            log::error!("解析分组数据JSON失败: {}", e);
+            format!("解析JSON失败: {}", e)
+        })?;
     
+    log::info!("分组数据加载成功: 总数={}", todo_data.todos.len());
     Ok(todo_data)
 }
 
@@ -244,16 +262,25 @@ pub async fn save_group_data(app: tauri::AppHandle, groups: Vec<crate::models::T
     let data_dir = get_data_dir(&app)?;
     let file_path = data_dir.join("groups.json");
     
+    log::info!("保存分组数据: 分组数={}", groups.len());
+    
     let group_data = crate::models::GroupData {
         groups,
     };
     
     let json_data = serde_json::to_string_pretty(&group_data)
-        .map_err(|e| format!("序列化数据失败: {}", e))?;
+        .map_err(|e| {
+            log::error!("序列化分组数据失败: {}", e);
+            format!("序列化数据失败: {}", e)
+        })?;
     
     fs::write(&file_path, json_data)
-        .map_err(|e| format!("写入文件失败: {}", e))?;
+        .map_err(|e| {
+            log::error!("写入分组数据文件失败: {}", e);
+            format!("写入文件失败: {}", e)
+        })?;
     
+    log::info!("分组数据保存成功");
     Ok(())
 }
 
@@ -265,6 +292,7 @@ pub async fn load_group_data(app: tauri::AppHandle) -> Result<crate::models::Gro
     
     if !file_path.exists() {
         // 如果文件不存在，返回默认分组
+        log::info!("分组数据文件不存在，使用默认分组");
         return Ok(crate::models::GroupData {
             groups: vec![crate::models::TodoGroup {
                 id: "default".to_string(),
@@ -275,11 +303,20 @@ pub async fn load_group_data(app: tauri::AppHandle) -> Result<crate::models::Gro
         });
     }
     
+    log::info!("加载分组数据");
+    
     let json_data = fs::read_to_string(&file_path)
-        .map_err(|e| format!("读取文件失败: {}", e))?;
+        .map_err(|e| {
+            log::error!("读取分组数据文件失败: {}", e);
+            format!("读取文件失败: {}", e)
+        })?;
     
     let group_data: crate::models::GroupData = serde_json::from_str(&json_data)
-        .map_err(|e| format!("解析JSON失败: {}", e))?;
+        .map_err(|e| {
+            log::error!("解析分组数据JSON失败: {}", e);
+            format!("解析JSON失败: {}", e)
+        })?;
     
+    log::info!("分组数据加载成功: 分组数={}", group_data.groups.len());
     Ok(group_data)
 }
