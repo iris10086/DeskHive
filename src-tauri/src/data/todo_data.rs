@@ -120,17 +120,21 @@ pub async fn update_todo_text(
     if let Some(todo) = found {
         log::info!("找到任务，更新文本");
         let old_text = todo.text.clone();
-        todo.text = new_text;
+        todo.text = new_text.clone();
+        
+        // 先克隆数据，避免借用冲突
+        let pending_clone = todo_data.pending_todos.clone();
+        let completed_clone = todo_data.completed_todos.clone();
         
         // 保存更新后的数据
-        let save_result = save_todo_data(app, todo_data.pending_todos.clone(), todo_data.completed_todos.clone()).await;
+        let save_result = save_todo_data(app, pending_clone, completed_clone).await;
         
         if save_result.is_err() {
             log::error!("保存任务文本失败");
             return save_result;
         }
         
-        log::info!("任务文本更新成功: '{}' -> '{}'", old_text, todo.text);
+        log::info!("任务文本更新成功: '{}' -> '{}'", old_text, new_text);
         Ok(())
     } else {
         let error_msg = format!("未找到指定的todo项: id='{}', completed={}", todo_id, is_completed);

@@ -1153,25 +1153,43 @@ async function openSettings() {
 // 监听主题变化
 async function listenThemeChange() {
   const currentWindow = getCurrentWindow();
-  await currentWindow.listen('theme-changed', (event) => {
+  const unlisten = await currentWindow.listen('theme-changed', (event) => {
     const theme = event.payload as string;
     document.body.className = theme === 'dark' ? 'dark-theme' : '';
   });
+  tauriUnlisteners.push(unlisten);
 }
 
 // 监听高优先级颜色变化
 async function listenPriorityColorChange() {
   const currentWindow = getCurrentWindow();
-  await currentWindow.listen('priority-color-changed', (event) => {
+  const unlisten = await currentWindow.listen('priority-color-changed', (event) => {
     priorityColor.value = event.payload as string;
   });
+  tauriUnlisteners.push(unlisten);
 }
+
+// 用户交互监听器引用（用于清理）
+let interactionListeners: {
+  mousedown: () => void;
+  contextmenu: () => void;
+  click: () => void;
+} | null = null;
+
+// Tauri事件监听器取消函数（用于清理）
+let tauriUnlisteners: Array<() => void> = [];
 
 // 启动倒计时更新定时器（优化版：只在用户不交互时更新）
 function startCountdownTimer() {
-  // 清理旧的定时器
+  // 清理旧的定时器和监听器
   if (countdownTimer.value) {
     clearInterval(countdownTimer.value);
+  }
+  if (interactionListeners) {
+    document.removeEventListener('mousedown', interactionListeners.mousedown);
+    document.removeEventListener('contextmenu', interactionListeners.contextmenu);
+    document.removeEventListener('click', interactionListeners.click);
+    interactionListeners = null;
   }
   
   let lastInteractionTime = Date.now();
@@ -1179,6 +1197,13 @@ function startCountdownTimer() {
   // 监听用户交互，记录最后交互时间
   const updateInteractionTime = () => {
     lastInteractionTime = Date.now();
+  };
+  
+  // 保存监听器引用以便清理
+  interactionListeners = {
+    mousedown: updateInteractionTime,
+    contextmenu: updateInteractionTime,
+    click: updateInteractionTime
   };
   
   document.addEventListener('mousedown', updateInteractionTime);
@@ -1233,14 +1258,16 @@ onMounted(async () => {
   startCountdownTimer();
   
   const currentWindow = getCurrentWindow();
-  await currentWindow.listen('drag-setting-changed', (event) => {
+  const unlisten1 = await currentWindow.listen('drag-setting-changed', (event) => {
     isDragDisabled.value = event.payload as boolean;
   });
+  tauriUnlisteners.push(unlisten1);
   
   // 监听窗口尺寸变化
-  await currentWindow.listen('window-size-changed', (event) => {
+  const unlisten2 = await currentWindow.listen('window-size-changed', (event) => {
     windowSize.value = event.payload as string;
   });
+  tauriUnlisteners.push(unlisten2);
 });
 
 // 组件卸载
@@ -1248,7 +1275,27 @@ onUnmounted(() => {
   // 清理定时器（如果存在）
   if (countdownTimer.value) {
     clearInterval(countdownTimer.value);
+    countdownTimer.value = null;
   }
+  
+  // 清理用户交互监听器
+  if (interactionListeners) {
+    document.removeEventListener('mousedown', interactionListeners.mousedown);
+    document.removeEventListener('contextmenu', interactionListeners.contextmenu);
+    document.removeEventListener('click', interactionListeners.click);
+    interactionListeners = null;
+  }
+  
+  // 清理Tauri事件监听器
+  tauriUnlisteners.forEach(unlisten => {
+    try {
+      unlisten();
+    } catch (error) {
+      console.error('取消Tauri事件监听失败:', error);
+    }
+  });
+  tauriUnlisteners = [];
+  
   // 移除事件监听器
   document.removeEventListener('contextmenu', preventDefaultContextMenu);
 });

@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "DeskHive",
-  "version": "1.0.2",
+  "version": "1.0.7",
   "identifier": "com.iamlzy.deskhive",
   "build": {
     "frontendDist": "../dist",
@@ -58,6 +58,11 @@
     ],
     "resources": [
       "../public/**/*"
-    ]
+    ],
+    "windows": {
+      "wix": {
+        "language": "zh-CN"
+      }
+    }
   }
 }

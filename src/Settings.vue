@@ -500,7 +500,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, watch } from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted, watch } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 
@@ -824,6 +824,14 @@ onMounted(async () => {
     loadSettings(),
     loadAppVersion()
   ])
+})
+
+// 组件卸载时清理定时器
+onUnmounted(() => {
+  if (saveTimeout) {
+    clearTimeout(saveTimeout)
+    saveTimeout = null
+  }
 })
 
 </script>
