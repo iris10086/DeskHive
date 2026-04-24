@@ -416,11 +416,11 @@ pub fn run() {
 
             // 启动通知检查定时器
             let app_handle = app.handle().clone();
-            std::thread::spawn(move || {
+            tauri::async_runtime::spawn(async move {
                 let notification_manager = notification::NotificationManager::new(app_handle);
                 while NOTIFICATION_THREAD_RUNNING.load(Ordering::SeqCst) {
                     // 每分钟检查一次
-                    std::thread::sleep(std::time::Duration::from_secs(60));
+                    tokio::time::sleep(std::time::Duration::from_secs(60)).await;
                     // 再次检查退出标志，避免在退出时执行通知
                     if !NOTIFICATION_THREAD_RUNNING.load(Ordering::SeqCst) {
                         break;
@@ -497,13 +497,15 @@ pub fn run() {
                 let _ = window.set_focus();
                 
                 // 延迟应用透明度和窗口层级设置，确保窗口完全初始化
+                // 使用 tauri::async_runtime::spawn 代替 std::thread::spawn
+                // 避免从非事件循环线程直接操作窗口导致与 tao 事件循环竞争
                 if let Some(settings) = loaded_settings {
                     let window_for_settings = window.clone();
                     let opacity_value = settings.opacity;
                     let window_level = settings.window_level.clone();
                     let window_size = settings.window_size.clone();
-                    std::thread::spawn(move || {
-                        std::thread::sleep(std::time::Duration::from_millis(100));
+                    tauri::async_runtime::spawn(async move {
+                        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
                         
                         // 应用窗口尺寸
                         let (width, height) = match window_size.as_str() {
@@ -570,35 +572,146 @@ pub fn run() {
                 // 在Tauri 2.x中处理窗口事件
                 #[cfg(target_os = "windows")]
                 {
-                    // 添加Windows消息处理来响应外部关闭请求
+                    // 监听系统关闭请求 (WM_QUERYENDSESSION / WM_ENDSESSION)
+                    // 
+                    // 之前的实现使用独立的 GetMessageW 消息循环线程，这会与 tao 的事件循环
+                    // 竞争分发窗口消息，导致 flush_paint_messages 断言失败崩溃。
+                    //
+                    // 现在改用创建一个隐藏的消息窗口（MessageWindow），使用 MsgWaitForMultipleObjects
+                    // 来等待系统关闭消息，而不使用 GetMessageW/DispatchMessageW 分发消息。
+                    // 这样不会与 tao 的事件循环产生竞争。
                     let app_handle_for_close = app.handle().clone();
                     std::thread::spawn(move || {
                         #[cfg(target_os = "windows")]
                         {
                             use windows::Win32::UI::WindowsAndMessaging::{
-                                GetMessageW, TranslateMessage, DispatchMessageW, 
-                                WM_QUERYENDSESSION, WM_ENDSESSION
+                                CreateWindowExW, DestroyWindow, DefWindowProcW,
+                                RegisterClassExW, WM_QUERYENDSESSION, WM_ENDSESSION,
+                                WNDCLASSEXW, WS_EX_NOACTIVATE,
+                                WM_DESTROY,
                             };
-                            use windows::Win32::Foundation::HWND;
-                            
-                            unsafe {
-                                let mut msg = std::mem::zeroed();
-                                while GetMessageW(&mut msg, HWND::default(), 0, 0).as_bool() {
-                                    if msg.message == WM_QUERYENDSESSION || msg.message == WM_ENDSESSION {
-                                        log::info!("收到系统关闭请求,准备退出应用");
-                                        APP_IS_EXITING.store(true, Ordering::SeqCst);
-                                        NOTIFICATION_THREAD_RUNNING.store(false, Ordering::SeqCst);
-                                        WIND_RESTORE_THREAD_RUNNING.store(false, Ordering::SeqCst);
-                                        
-                                        // 异步调用退出
-                                        let app = app_handle_for_close.clone();
-                                        tauri::async_runtime::spawn(async move {
-                                            let _ = quit_app(app).await;
-                                        });
-                                    }
-                                    let _ = TranslateMessage(&msg);
-                                    let _ = DispatchMessageW(&msg);
+                            use windows::Win32::Foundation::{HWND, WPARAM, LPARAM, LRESULT};
+                            use windows::Win32::System::Threading::GetCurrentThreadId;
+                            use windows::core::PCWSTR;
+
+                            // 自定义窗口过程：处理 WM_DESTROY 并将其他消息传给 DefWindowProcW
+                            unsafe extern "system" fn shutdown_wnd_proc(
+                                hwnd: HWND,
+                                msg: u32,
+                                wparam: WPARAM,
+                                lparam: LPARAM,
+                            ) -> LRESULT {
+                                if msg == WM_DESTROY {
+                                    // 窗口被销毁，设置退出标志
+                                    APP_IS_EXITING.store(true, Ordering::SeqCst);
                                 }
+                                DefWindowProcW(hwnd, msg, wparam, lparam)
+                            }
+
+                            unsafe {
+                                // 注册一个隐藏窗口类
+                                let class_name: Vec<u16> = "DeskHiveShutdownMonitor\0"
+                                    .encode_utf16().collect();
+                                
+                                let wnd_class = WNDCLASSEXW {
+                                    cbSize: std::mem::size_of::<WNDCLASSEXW>() as u32,
+                                    lpfnWndProc: Some(shutdown_wnd_proc),
+                                    lpszClassName: PCWSTR(class_name.as_ptr()),
+                                    ..std::mem::zeroed()
+                                };
+                                
+                                if RegisterClassExW(&wnd_class) == 0 {
+                                    log::warn!("注册关闭监听窗口类失败");
+                                    return;
+                                }
+                                
+                                // 创建一个不可见的消息窗口
+                                let hwnd = CreateWindowExW(
+                                    WS_EX_NOACTIVATE,
+                                    PCWSTR(class_name.as_ptr()),
+                                    PCWSTR(class_name.as_ptr()),
+                                    Default::default(),
+                                    0, 0, 0, 0,
+                                    HWND::default(),
+                                    None,
+                                    None,
+                                    None,
+                                );
+                                
+                                if hwnd.0 == 0 {
+                                    log::warn!("创建关闭监听窗口失败");
+                                    return;
+                                }
+                                
+                                log::info!("系统关闭监听窗口已创建 (线程ID: {})", GetCurrentThreadId());
+                                
+                                // 使用 PeekMessageW + MsgWaitForMultipleObjects 来等待消息
+                                // 关键：只处理 WM_QUERYENDSESSION/WM_ENDSESSION，
+                                // 不调用 DispatchMessageW 分发其他消息，避免与 tao 竞争
+                                use windows::Win32::UI::WindowsAndMessaging::{
+                                    PeekMessageW, PM_REMOVE, PM_NOREMOVE,
+                                    MsgWaitForMultipleObjects, QS_ALLEVENTS,
+                                };
+                                use windows::Win32::Foundation::WAIT_OBJECT_0;
+                                
+                                let mut msg = std::mem::zeroed();
+                                
+                                while !APP_IS_EXITING.load(Ordering::SeqCst) {
+                                    // 等待消息到达（阻塞等待，不消耗 CPU）
+                                    let wait_result = MsgWaitForMultipleObjects(
+                                        None,
+                                        None,
+                                        5000, // 5秒超时，定期检查退出标志
+                                        QS_ALLEVENTS,
+                                    );
+                                    
+                                    if wait_result == WAIT_OBJECT_0 .0 {
+                                        // 有消息到达，只 Peek 不 Dispatch
+                                        while PeekMessageW(
+                                            &mut msg,
+                                            hwnd,
+                                            0, 0,
+                                            PM_NOREMOVE,
+                                        ).as_bool() {
+                                            // 检查是否是系统关闭消息
+                                            if msg.message == WM_QUERYENDSESSION 
+                                               || msg.message == WM_ENDSESSION {
+                                                log::info!("收到系统关闭请求,准备退出应用");
+                                                APP_IS_EXITING.store(true, Ordering::SeqCst);
+                                                NOTIFICATION_THREAD_RUNNING.store(false, Ordering::SeqCst);
+                                                WIND_RESTORE_THREAD_RUNNING.store(false, Ordering::SeqCst);
+                                                
+                                                // 移除消息并处理
+                                                PeekMessageW(
+                                                    &mut msg,
+                                                    hwnd,
+                                                    msg.message, msg.message,
+                                                    PM_REMOVE,
+                                                );
+                                                
+                                                // 异步调用退出
+                                                let app = app_handle_for_close.clone();
+                                                tauri::async_runtime::spawn(async move {
+                                                    let _ = quit_app(app).await;
+                                                });
+                                                break;
+                                            } else {
+                                                // 非关闭消息：移除并丢弃，不分发
+                                                // 这避免了与 tao 事件循环的竞争
+                                                PeekMessageW(
+                                                    &mut msg,
+                                                    hwnd,
+                                                    msg.message, msg.message,
+                                                    PM_REMOVE,
+                                                );
+                                            }
+                                        }
+                                    }
+                                    // 超时或等待失败：继续循环检查退出标志
+                                }
+                                
+                                let _ = DestroyWindow(hwnd);
+                                log::info!("系统关闭监听线程已退出");
                             }
                         }
                     });
@@ -620,10 +733,12 @@ pub fn run() {
                                     if !FOCUS_RESTORE_THREAD_RUNNING.load(Ordering::SeqCst) {
                                         FOCUS_RESTORE_THREAD_RUNNING.store(true, Ordering::SeqCst);
                                         
-                                        // 设置一个短暂延迟后尝试恢复窗口
+                                        // 使用 tauri::async_runtime::spawn 代替 std::thread::spawn
+                                        // 避免从非事件循环线程直接调用 window.show() 导致
+                                        // 与 tao 事件循环的 WM_PAINT 处理竞争
                                         let win = win_handle.clone();
-                                        std::thread::spawn(move || {
-                                            std::thread::sleep(std::time::Duration::from_millis(100));
+                                        tauri::async_runtime::spawn(async move {
+                                            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
                                             if WIN_D_PRESSED.load(Ordering::SeqCst) {
                                                 // 尝试恢复窗口，但不强制获取焦点
                                                 let _ = win.show();
@@ -710,10 +825,13 @@ pub fn run() {
                     });
 
                     // 定时器：只处理 Win+D 恢复
+                    // 使用 tauri::async_runtime::spawn 代替 std::thread::spawn
+                    // 避免从非事件循环线程直接调用 window.show() 导致
+                    // 与 tao 事件循环的 WM_PAINT 处理竞争（flush_paint_messages 断言失败）
                     let win_handle2 = window.clone();
-                    std::thread::spawn(move || {
+                    tauri::async_runtime::spawn(async move {
                         while WIND_RESTORE_THREAD_RUNNING.load(Ordering::SeqCst) {
-                            std::thread::sleep(std::time::Duration::from_millis(300));
+                            tokio::time::sleep(std::time::Duration::from_millis(300)).await;
 
                             // 检查退出标志
                             if !WIND_RESTORE_THREAD_RUNNING.load(Ordering::SeqCst) {

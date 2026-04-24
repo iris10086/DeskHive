@@ -1,6 +1,6 @@
 [package]
 name = "deskhive"
-version = "1.0.7"
+version = "1.0.8"
 description = "DeskHive Desktop Assistant"
 authors = ["you"]
 license = ""
@@ -25,6 +25,12 @@ tauri = { version = "2.7.0", features = ["tray-icon"] }
 tauri-plugin-log = "2"
 tauri-plugin-notification = "2"
 windows = { version = "0.48", features = ["Win32_UI_WindowsAndMessaging", "Win32_Foundation", "Win32_Graphics_Gdi", "Win32_System_Registry", "Win32_System_Threading", "Win32_Security", "Win32_Media_Audio"] }
+tokio = { version = "1", features = ["time"] }
 raw-window-handle = "0.6"
 chrono = { version = "0.4", features = ["serde"] }
 uuid = { version = "1.0", features = ["v4"] }
+
+# Patch tao to fix flush_paint_messages assertion panic on Windows
+# See: https://github.com/tauri-apps/tao/issues/1140
+[patch.crates-io]
+tao = { path = "./patches/tao-0.34.1" }

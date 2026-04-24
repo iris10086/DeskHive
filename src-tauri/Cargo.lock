@@ -812,7 +812,7 @@ dependencies = [
 
 [[package]]
 name = "deskhive"
-version = "1.0.7"
+version = "1.0.8"
 dependencies = [
  "chrono",
  "log",
@@ -823,6 +823,7 @@ dependencies = [
  "tauri-build",
  "tauri-plugin-log",
  "tauri-plugin-notification",
+ "tokio",
  "uuid",
  "windows 0.48.0",
 ]
@@ -3752,8 +3753,6 @@ dependencies = [
 [[package]]
 name = "tao"
 version = "0.34.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b65dc99ae111a3255027d1eca24a3833bb3267d4556a6defddb455f3ca4f5b6c"
 dependencies = [
  "bitflags 2.9.2",
  "core-foundation",
