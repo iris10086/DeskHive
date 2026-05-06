@@ -6,6 +6,7 @@ pub mod window_position;
 pub use todo_data::{
     save_todo_data, load_todo_data, set_todo_deadline, update_todo_text,
     save_todo_data_with_groups, load_todo_data_with_groups,
+    update_single_todo, update_single_group,
     save_group_data, load_group_data
 };
 pub use app_settings::{save_app_settings, load_app_settings, apply_opacity};

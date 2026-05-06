@@ -116,6 +116,8 @@ pub async fn load_app_settings(app: tauri::AppHandle) -> Result<AppSettings, Str
             timeline_deadline_priority: true,
             enable_deadline_notification: false,
             notification_minutes_before: 30,
+            sync_enabled: false,
+            sync_server_url: "".to_string(),
         });
     }
     

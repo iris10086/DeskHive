@@ -29,6 +29,8 @@ use data::{
     update_todo_text,
     save_todo_data_with_groups,
     load_todo_data_with_groups,
+    update_single_todo,
+    update_single_group,
     save_group_data,
     load_group_data,
     save_app_settings,
@@ -80,6 +82,25 @@ async fn emit_theme_changed(app: tauri::AppHandle, theme: String) -> Result<(), 
 #[tauri::command]
 async fn emit_priority_color_changed(app: tauri::AppHandle, color: String) -> Result<(), String> {
     app.emit("priority-color-changed", color).map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+// Tauri 命令：通知主窗口数据已同步，需要刷新
+#[tauri::command]
+async fn emit_data_synced(app: tauri::AppHandle) -> Result<(), String> {
+    app.emit("data-synced", ()).map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+// Tauri 命令：通知主窗口同步配置已更改
+#[tauri::command]
+async fn emit_sync_config_changed(app: tauri::AppHandle, sync_enabled: bool, sync_server_url: String) -> Result<(), String> {
+    use serde_json::json;
+    let payload = json!({
+        "sync_enabled": sync_enabled,
+        "sync_server_url": sync_server_url
+    });
+    app.emit("sync-config-changed", payload).map_err(|e| e.to_string())?;
     Ok(())
 }
 
@@ -148,6 +169,8 @@ pub fn run() {
             update_todo_text,
             save_todo_data_with_groups,
             load_todo_data_with_groups,
+            update_single_todo,
+            update_single_group,
             save_group_data,
             load_group_data,
             save_app_settings,
@@ -172,6 +195,8 @@ pub fn run() {
             quit_app,
             emit_theme_changed,
             emit_priority_color_changed,
+            emit_data_synced,
+            emit_sync_config_changed,
             test_notification
         ])
         .setup(|app| {

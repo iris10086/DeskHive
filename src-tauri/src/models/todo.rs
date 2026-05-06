@@ -18,6 +18,14 @@ pub struct Todo {
     pub group_id: String, // 所属分组ID
     #[serde(default)] // 为了兼容旧数据，设为默认值
     pub priority: i32, // 优先级：0=普通，1=重要
+    #[serde(default = "current_timestamp")] // 同步用，兼容旧数据
+    pub updated_at: i64, // 最后更新时间，Unix时间戳（秒）
+    #[serde(default)] // 逻辑删除标记，兼容旧数据
+    pub is_deleted: bool,
+}
+
+fn current_timestamp() -> i64 {
+    chrono::Utc::now().timestamp()
 }
 
 // 默认分组ID
@@ -43,6 +51,8 @@ pub struct TodoGroup {
     pub name: String,
     pub order: i32,
     pub collapsed: bool,
+    #[serde(default = "current_timestamp")] // 同步用，兼容旧数据
+    pub updated_at: i64, // 最后更新时间，Unix时间戳（秒）
 }
 
 #[derive(Serialize, Deserialize)]

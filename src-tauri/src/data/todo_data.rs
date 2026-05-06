@@ -238,6 +238,70 @@ pub async fn load_todo_data_with_groups(app: tauri::AppHandle) -> Result<crate::
     Ok(todo_data)
 }
 
+// Tauri 命令：更新单个todo（修改指定字段，不重写整个文件）
+#[tauri::command]
+pub async fn update_single_todo(app: tauri::AppHandle, todo: crate::models::Todo) -> Result<(), String> {
+    let data_dir = get_data_dir(&app)?;
+    let file_path = data_dir.join("todos_with_groups.json");
+
+    // 读取现有数据
+    let mut todo_data: crate::models::TodoDataWithGroups = if file_path.exists() {
+        let json_data = fs::read_to_string(&file_path)
+            .map_err(|e| format!("读取文件失败: {}", e))?;
+        serde_json::from_str(&json_data)
+            .map_err(|e| format!("解析JSON失败: {}", e))?
+    } else {
+        crate::models::TodoDataWithGroups { todos: Vec::new() }
+    };
+
+    // 查找并替换对应todo
+    if let Some(existing) = todo_data.todos.iter_mut().find(|t| t.id == todo.id) {
+        *existing = todo;
+    } else {
+        todo_data.todos.push(todo);
+    }
+
+    // 写回文件
+    let json_data = serde_json::to_string_pretty(&todo_data)
+        .map_err(|e| format!("序列化数据失败: {}", e))?;
+    fs::write(&file_path, json_data)
+        .map_err(|e| format!("写入文件失败: {}", e))?;
+
+    Ok(())
+}
+
+// Tauri 命令：更新单个分组
+#[tauri::command]
+pub async fn update_single_group(app: tauri::AppHandle, group: crate::models::TodoGroup) -> Result<(), String> {
+    let data_dir = get_data_dir(&app)?;
+    let file_path = data_dir.join("groups.json");
+
+    // 读取现有数据
+    let mut group_data: crate::models::GroupData = if file_path.exists() {
+        let json_data = fs::read_to_string(&file_path)
+            .map_err(|e| format!("读取文件失败: {}", e))?;
+        serde_json::from_str(&json_data)
+            .map_err(|e| format!("解析JSON失败: {}", e))?
+    } else {
+        crate::models::GroupData { groups: Vec::new() }
+    };
+
+    // 查找并替换对应分组
+    if let Some(existing) = group_data.groups.iter_mut().find(|g| g.id == group.id) {
+        *existing = group;
+    } else {
+        group_data.groups.push(group);
+    }
+
+    // 写回文件
+    let json_data = serde_json::to_string_pretty(&group_data)
+        .map_err(|e| format!("序列化数据失败: {}", e))?;
+    fs::write(&file_path, json_data)
+        .map_err(|e| format!("写入文件失败: {}", e))?;
+
+    Ok(())
+}
+
 // Tauri 命令：保存分组数据
 #[tauri::command]
 pub async fn save_group_data(app: tauri::AppHandle, groups: Vec<crate::models::TodoGroup>) -> Result<(), String> {
@@ -271,6 +335,7 @@ pub async fn load_group_data(app: tauri::AppHandle) -> Result<crate::models::Gro
                 name: "未分组".to_string(),
                 order: 0,
                 collapsed: false,
+                updated_at: 0,
             }],
         });
     }

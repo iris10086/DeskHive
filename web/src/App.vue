@@ -1,7 +1,7 @@
 <template>
   <div class="container">
-    <header :data-tauri-drag-region="!isDragDisabled ? '' : null">
-      <div class="header-title" :data-tauri-drag-region="!isDragDisabled ? '' : null">
+    <header>
+      <div class="header-title">
         <img src="/icons/app-icon.svg" alt="DeskHive" class="app-icon">
         DeskHive
       </div>
@@ -10,7 +10,6 @@
         <Tooltip :text="isTimelineView ? '切换到列表视图' : '切换到时间轴视图'">
           <button class="view-toggle-btn" @click="toggleView">
             <svg v-if="!isTimelineView" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <!-- 树状时间轴图标 -->
               <path d="M6 3v18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
               <circle cx="6" cy="6" r="2" fill="currentColor"/>
               <path d="M6 6h6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
@@ -34,16 +33,13 @@
     </header>
 
     <div class="todo-container">
-      <!-- 空状态显示日期信息 -->
-      <EmptyState 
-        v-if="showEmptyState && dateInfo" 
+      <EmptyState
+        v-if="showEmptyState && dateInfo"
         :date-info="dateInfo"
       />
 
-      <!-- 全部任务完成状态 -->
       <AllCompletedState v-if="showAllCompletedState" />
 
-      <!-- 时间轴视图 -->
       <Transition name="view-fade" mode="out-in">
         <TimelineView
           v-if="isTimelineView && !showEmptyState && !showAllCompletedState"
@@ -58,9 +54,7 @@
           @toggle-priority="handleTogglePriority"
         />
 
-        <!-- 分组列表 -->
         <div v-else-if="!showEmptyState && !showAllCompletedState" key="list" class="groups-container">
-        <!-- 未分组的任务 - 直接显示 -->
         <div v-if="getGroupTodos('default', false).length > 0" class="default-tasks">
           <TodoList
             :todos="getGroupTodos('default', false)"
@@ -77,8 +71,7 @@
             @change="(event) => handleTodoChange('default', event)"
           />
         </div>
-        
-        <!-- 其他分组 -->
+
         <TransitionGroup name="group-list" tag="div" class="active-groups">
           <TodoGroupComponent
             v-for="group in sortedGroupsWithoutDefault"
@@ -102,8 +95,7 @@
             @drop-on-header="handleDropOnGroupHeader(group.id)"
           />
         </TransitionGroup>
-        
-        <!-- 已完成任务分组 - 固定在底部 -->
+
         <div v-if="allCompletedTodos.length > 0" class="completed-group-wrapper">
           <div class="completed-group">
             <div class="group-header" @click="toggleCompletedSection">
@@ -138,14 +130,12 @@
         </div>
       </Transition>
     </div>
-    
-    <!-- 底部添加任务区域 -->
+
     <AddTaskMenu
       @add-task="addTask"
       @add-group="showAddGroupDialog"
     />
-    
-    <!-- 任务右键菜单 -->
+
     <ContextMenu
       :show="showContextMenu"
       :position="contextMenuPosition"
@@ -156,8 +146,7 @@
       @edit-todo="openEditDialog"
       @remove-old-completed="removeOldCompletedTodos"
     />
-    
-    <!-- 分组右键菜单 -->
+
     <GroupContextMenu
       :show="showGroupMenu"
       :position="groupMenuPosition"
@@ -166,8 +155,7 @@
       @toggle-collapse="toggleContextGroupCollapse"
       @delete="deleteGroup"
     />
-    
-    <!-- 分组名称对话框 -->
+
     <GroupNameDialog
       :show="showGroupDialog"
       :initial-name="groupDialogName"
@@ -175,8 +163,7 @@
       @confirm="handleGroupDialogConfirm"
       @cancel="closeGroupDialog"
     />
-    
-    <!-- 截止时间设置对话框 -->
+
     <DeadlineDialog
       :show="showDeadlineDialog"
       :initial-date="deadlineDate"
@@ -184,16 +171,14 @@
       @close="closeDeadlineDialog"
       @confirm="handleDeadlineConfirm"
     />
-    
-    <!-- 编辑任务对话框 -->
+
     <EditTaskDialog
       :show="showEditDialog"
       :todo="editDialogTodo"
       @confirm="handleEditConfirm"
       @cancel="closeEditDialog"
     />
-    
-    <!-- Toast 提示 -->
+
     <Toast
       :show="showToast"
       :message="toastMessage"
@@ -204,10 +189,11 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, provide, nextTick } from 'vue';
-import { invoke } from '@tauri-apps/api/core';
-import { getCurrentWindow } from '@tauri-apps/api/window';
+import { useRouter } from 'vue-router';
+import { invoke } from './api';
 import type { Todo, TodoGroup, DateInfo } from './types';
 import { initSync, updateConfig, pushAndPull, startTimer, stopTimer } from './sync';
+import { startWS, stopWS, onDataUpdated } from './ws';
 import EmptyState from './components/EmptyState.vue';
 import AllCompletedState from './components/AllCompletedState.vue';
 import TodoGroupComponent from './components/TodoGroup.vue';
@@ -222,7 +208,8 @@ import DeadlineDialog from './components/DeadlineDialog.vue';
 import EditTaskDialog from './components/EditTaskDialog.vue';
 import Toast from './components/Toast.vue';
 
-// 数据状态
+const router = useRouter();
+
 const todos = ref<Todo[]>([]);
 const groups = ref<TodoGroup[]>([]);
 const dateInfo = ref<DateInfo | null>(null);
@@ -232,7 +219,6 @@ const priorityColor = ref('#FF9800');
 const isTimelineView = ref(false);
 const timelineDeadlinePriority = ref(true);
 
-// 右键菜单状态
 const showContextMenu = ref(false);
 const contextMenuPosition = ref({ x: 0, y: 0 });
 const contextMenuTodo = ref<Todo | null>(null);
@@ -241,7 +227,6 @@ const showGroupMenu = ref(false);
 const groupMenuPosition = ref({ x: 0, y: 0 });
 const contextMenuGroup = ref<TodoGroup | null>(null);
 
-// 对话框状态
 const showGroupDialog = ref(false);
 const groupDialogName = ref('');
 const isEditingGroup = ref(false);
@@ -251,25 +236,21 @@ const showDeadlineDialog = ref(false);
 const deadlineDate = ref('');
 const deadlineTime = ref('');
 const dialogTodo = ref<Todo | null>(null);
-const isSettingDeadline = ref(false); // 添加标志位，防止重复操作
+const isSettingDeadline = ref(false);
 
 const showEditDialog = ref(false);
 const editDialogTodo = ref<Todo | null>(null);
 
-// Toast 状态
 const showToast = ref(false);
 const toastMessage = ref('');
 const toastType = ref<'error' | 'success' | 'warning'>('error');
 
-// 定时器和当前时间戳（用于倒计时实时更新）
 const countdownTimer = ref<number | null>(null);
-const currentTimestamp = ref<number>(Date.now()); // 当前时间戳，每30秒更新一次
+const currentTimestamp = ref<number>(Date.now());
 
-// 拖动状态
 const draggedTodo = ref<Todo | null>(null);
 const dragSourceGroupId = ref<string | null>(null);
 
-// 计算属性
 const sortedGroups = computed(() => {
   return [...groups.value].sort((a, b) => a.order - b.order);
 });
@@ -287,22 +268,18 @@ const completedTasksCount = computed(() => todos.value.filter(t => t.completed &
 
 const showEmptyState = computed(() => todos.value.filter(t => !t.isDeleted).length === 0);
 const showAllCompletedState = computed(() => {
-  // 只有当所有任务都完成，且所有分组（除了default）都被删除时才显示
   const activeTodos = todos.value.filter(t => !t.isDeleted);
   const hasActiveTodos = activeTodos.some(t => !t.completed);
   const hasNonDefaultGroups = sortedGroupsWithoutDefault.value.length > 0;
-
   return activeTodos.length > 0 && !hasActiveTodos && !hasNonDefaultGroups;
 });
 
-// 获取分组的任务
 function getGroupTodos(groupId: string, completed: boolean) {
   return todos.value
     .filter(t => t.groupId === groupId && t.completed === completed && !t.isDeleted)
     .sort((a, b) => a.order - b.order);
 }
 
-// 生成唯一ID
 function generateUniqueId(): string {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
     const r = Math.random() * 16 | 0;
@@ -311,7 +288,6 @@ function generateUniqueId(): string {
   });
 }
 
-// 初始化默认分组
 function initializeDefaultGroup() {
   if (groups.value.length === 0) {
     groups.value.push({
@@ -324,9 +300,6 @@ function initializeDefaultGroup() {
   }
 }
 
-// 选择分组函数已移除，不再需要
-
-// 切换分组折叠状态
 function toggleGroupCollapse(groupId: string) {
   const group = groups.value.find(g => g.id === groupId);
   if (group) {
@@ -337,18 +310,14 @@ function toggleGroupCollapse(groupId: string) {
   }
 }
 
-// 切换已完成部分折叠状态
 function toggleCompletedSection() {
   isCompletedCollapsed.value = !isCompletedCollapsed.value;
 }
 
-// 添加任务
 function addTask(text: string) {
-  // 检查是否是创建分组的命令（以 / 开头）
   if (text.startsWith('/')) {
     const groupName = text.slice(1).trim();
     if (groupName) {
-      // 直接创建分组，不弹窗
       const maxOrder = Math.max(0, ...groups.value.map(g => g.order));
       groups.value.push({
         id: generateUniqueId(),
@@ -362,11 +331,10 @@ function addTask(text: string) {
     }
     return;
   }
-  
+
   const now = Math.floor(Date.now() / 1000);
-  // 新任务始终添加到未分组（default）
   const maxOrder = Math.max(0, ...todos.value.filter(t => t.groupId === 'default').map(t => t.order));
-  
+
   todos.value.push({
     id: generateUniqueId(),
     text: text,
@@ -374,29 +342,27 @@ function addTask(text: string) {
     createdAt: now,
     order: maxOrder + 1,
     groupId: 'default',
-    priority: 0, // 默认优先级为普通
+    priority: 0,
     updatedAt: now
   });
-  
+
   saveTodoData();
 }
 
-// 切换任务完成状态
 function toggleTodo(groupId: string, index: number) {
   const groupTodos = getGroupTodos(groupId, false);
   const todo = groupTodos[index];
   const todoIndex = todos.value.findIndex(t => t.id === todo.id);
-  
+
   if (todoIndex !== -1) {
     const now = Math.floor(Date.now() / 1000);
     todos.value[todoIndex].completed = true;
-    todos.value[todoIndex].completedAt = now; // 记录完成时间
+    todos.value[todoIndex].completedAt = now;
     todos.value[todoIndex].updatedAt = now;
     saveSingleTodo(todos.value[todoIndex]);
   }
 }
 
-// 切换已完成任务状态
 function toggleCompletedTodo(index: number) {
   const todo = allCompletedTodos.value[index];
   const todoIndex = todos.value.findIndex(t => t.id === todo.id);
@@ -404,13 +370,12 @@ function toggleCompletedTodo(index: number) {
   if (todoIndex !== -1) {
     const now = Math.floor(Date.now() / 1000);
     todos.value[todoIndex].completed = false;
-    todos.value[todoIndex].completedAt = undefined; // 清除完成时间
+    todos.value[todoIndex].completedAt = undefined;
     todos.value[todoIndex].updatedAt = now;
     saveSingleTodo(todos.value[todoIndex]);
   }
 }
 
-// 删除任务（逻辑删除）
 function deleteTodo(groupId: string, index: number) {
   const groupTodos = getGroupTodos(groupId, false);
   const todo = groupTodos[index];
@@ -423,7 +388,6 @@ function deleteTodo(groupId: string, index: number) {
   }
 }
 
-// 删除已完成任务（逻辑删除）
 function deleteCompletedTodo(index: number) {
   const todo = allCompletedTodos.value[index];
   const todoIndex = todos.value.findIndex(t => t.id === todo.id);
@@ -435,7 +399,6 @@ function deleteCompletedTodo(index: number) {
   }
 }
 
-// 清除所有已完成任务（逻辑删除）
 function clearAllCompletedTodos() {
   const now = Math.floor(Date.now() / 1000);
   let clearedCount = 0;
@@ -452,10 +415,9 @@ function clearAllCompletedTodos() {
   showToastMessage('已清除所有已完成任务', 'success');
 }
 
-// 移除完成7天前的任务（逻辑删除）
 function removeOldCompletedTodos() {
   const now = Math.floor(Date.now() / 1000);
-  const sevenDaysAgo = now - (7 * 24 * 60 * 60); // 7天前的时间戳
+  const sevenDaysAgo = now - (7 * 24 * 60 * 60);
 
   let removedCount = 0;
   todos.value.forEach(t => {
@@ -476,7 +438,6 @@ function removeOldCompletedTodos() {
   hideContextMenu();
 }
 
-// 显示任务右键菜单
 function showTodoContextMenu(event: MouseEvent, todo: Todo) {
   event.preventDefault();
   contextMenuTodo.value = todo;
@@ -485,14 +446,12 @@ function showTodoContextMenu(event: MouseEvent, todo: Todo) {
   document.addEventListener('click', hideContextMenu);
 }
 
-// 隐藏任务右键菜单
 function hideContextMenu() {
   showContextMenu.value = false;
   contextMenuTodo.value = null;
   document.removeEventListener('click', hideContextMenu);
 }
 
-// 从右键菜单删除任务（逻辑删除）
 function deleteTodoFromContextMenu() {
   if (!contextMenuTodo.value) return;
 
@@ -507,7 +466,6 @@ function deleteTodoFromContextMenu() {
   hideContextMenu();
 }
 
-// 显示分组右键菜单
 function showGroupContextMenu(event: MouseEvent, group: TodoGroup) {
   event.preventDefault();
   contextMenuGroup.value = group;
@@ -516,14 +474,12 @@ function showGroupContextMenu(event: MouseEvent, group: TodoGroup) {
   document.addEventListener('click', hideGroupMenu);
 }
 
-// 隐藏分组右键菜单
 function hideGroupMenu() {
   showGroupMenu.value = false;
   contextMenuGroup.value = null;
   document.removeEventListener('click', hideGroupMenu);
 }
 
-// 切换右键菜单中的分组折叠状态
 function toggleContextGroupCollapse() {
   if (contextMenuGroup.value) {
     toggleGroupCollapse(contextMenuGroup.value.id);
@@ -531,7 +487,6 @@ function toggleContextGroupCollapse() {
   }
 }
 
-// 显示添加分组对话框
 function showAddGroupDialog() {
   groupDialogName.value = '';
   isEditingGroup.value = false;
@@ -539,10 +494,9 @@ function showAddGroupDialog() {
   showGroupDialog.value = true;
 }
 
-// 显示重命名分组对话框
 function showRenameGroupDialog() {
   if (!contextMenuGroup.value) return;
-  
+
   groupDialogName.value = contextMenuGroup.value.name;
   isEditingGroup.value = true;
   editingGroupId.value = contextMenuGroup.value.id;
@@ -550,7 +504,6 @@ function showRenameGroupDialog() {
   hideGroupMenu();
 }
 
-// 关闭分组对话框
 function closeGroupDialog() {
   showGroupDialog.value = false;
   groupDialogName.value = '';
@@ -558,10 +511,8 @@ function closeGroupDialog() {
   editingGroupId.value = null;
 }
 
-// 处理分组对话框确认
 function handleGroupDialogConfirm(name: string) {
   if (isEditingGroup.value && editingGroupId.value) {
-    // 重命名分组
     const group = groups.value.find(g => g.id === editingGroupId.value);
     if (group) {
       const now = Math.floor(Date.now() / 1000);
@@ -571,7 +522,6 @@ function handleGroupDialogConfirm(name: string) {
       showToastMessage('分组已重命名', 'success');
     }
   } else {
-    // 新建分组
     const maxOrder = Math.max(0, ...groups.value.map(g => g.order));
     groups.value.push({
       id: generateUniqueId(),
@@ -583,27 +533,24 @@ function handleGroupDialogConfirm(name: string) {
     var lastGrp = groups.value[groups.value.length - 1]; saveSingleGroup(lastGrp);
     showToastMessage('分组已创建', 'success');
   }
-  
+
   closeGroupDialog();
 }
 
-// 删除分组
 function deleteGroup() {
   if (!contextMenuGroup.value || contextMenuGroup.value.id === 'default') {
     hideGroupMenu();
     return;
   }
-  
+
   const groupId = contextMenuGroup.value.id;
-  
-  // 将分组中的任务移动到默认分组
+
   todos.value.forEach(todo => {
     if (todo.groupId === groupId) {
       todo.groupId = 'default';
     }
   });
-  
-  // 删除分组
+
   const groupIndex = groups.value.findIndex(g => g.id === groupId);
   if (groupIndex !== -1) {
     groups.value.splice(groupIndex, 1);
@@ -611,50 +558,44 @@ function deleteGroup() {
     saveTodoData();
     showToastMessage('分组已删除', 'success');
   }
-  
+
   hideGroupMenu();
 }
 
-// 打开编辑任务对话框
 function openEditDialog() {
   if (!contextMenuTodo.value) return;
-  
+
   editDialogTodo.value = contextMenuTodo.value;
   hideContextMenu();
   showEditDialog.value = true;
 }
 
-// 处理双击编辑任务
 function handleEditTodo(todo: Todo) {
   editDialogTodo.value = todo;
   showEditDialog.value = true;
 }
 
-// 处理切换优先级
 function handleTogglePriority(todo: Todo) {
   const todoIndex = todos.value.findIndex(t => t.id === todo.id);
   if (todoIndex !== -1) {
     const now = Math.floor(Date.now() / 1000);
-    // 切换优先级：0 <-> 1
     todos.value[todoIndex].priority = todos.value[todoIndex].priority === 1 ? 0 : 1;
     todos.value[todoIndex].updatedAt = now;
     saveSingleTodo(todos.value[todoIndex]);
   }
 }
 
-// 关闭编辑任务对话框
 function closeEditDialog() {
   showEditDialog.value = false;
   editDialogTodo.value = null;
 }
 
-// 处理编辑确认
 async function handleEditConfirm(newText: string) {
   if (!editDialogTodo.value || !newText.trim()) {
     closeEditDialog();
     return;
   }
-  
+
   const todoIndex = todos.value.findIndex(t => t.id === editDialogTodo.value!.id);
   if (todoIndex !== -1) {
     const now = Math.floor(Date.now() / 1000);
@@ -662,38 +603,33 @@ async function handleEditConfirm(newText: string) {
     todos.value[todoIndex].updatedAt = now;
     saveSingleTodo(todos.value[todoIndex]);
   }
-  
+
   closeEditDialog();
 }
 
-// 打开截止时间设置对话框
 function openDeadlineDialog() {
   if (!contextMenuTodo.value || isSettingDeadline.value) return;
-  
+
   dialogTodo.value = contextMenuTodo.value;
-  
+
   if (contextMenuTodo.value.deadline) {
-    // 如果有截止时间，使用原来的截止时间
     const deadlineDateTime = new Date(contextMenuTodo.value.deadline * 1000);
     deadlineDate.value = deadlineDateTime.toISOString().split('T')[0];
     deadlineTime.value = deadlineDateTime.toTimeString().slice(0, 5);
   } else {
-    // 如果没有截止时间，使用当前时间的 1 小时后
     const now = new Date();
-    const oneHourLater = new Date(now.getTime() + 60 * 60 * 1000); // 加 1 小时（毫秒）
-    
+    const oneHourLater = new Date(now.getTime() + 60 * 60 * 1000);
+
     deadlineDate.value = oneHourLater.toISOString().split('T')[0];
     deadlineTime.value = `${oneHourLater.getHours().toString().padStart(2, '0')}:${oneHourLater.getMinutes().toString().padStart(2, '0')}`;
   }
-  
+
   hideContextMenu();
-  // 延迟显示对话框，确保右键菜单完全关闭
   setTimeout(() => {
     showDeadlineDialog.value = true;
   }, 50);
 }
 
-// 关闭截止时间设置对话框
 function closeDeadlineDialog() {
   showDeadlineDialog.value = false;
   isSettingDeadline.value = false;
@@ -702,66 +638,50 @@ function closeDeadlineDialog() {
   deadlineTime.value = '';
 }
 
-// 处理截止时间确认
 async function handleDeadlineConfirm(date: string, time: string) {
-  // 防止重复提交
   if (isSettingDeadline.value) return;
   isSettingDeadline.value = true;
-  
+
   deadlineDate.value = date;
   deadlineTime.value = time;
-  
+
   if (!dialogTodo.value || !deadlineDate.value || !deadlineTime.value) {
     showToastMessage('请选择日期和时间', 'warning');
     isSettingDeadline.value = false;
     return;
   }
-  
+
   const deadlineDateTime = new Date(`${deadlineDate.value}T${deadlineTime.value}`);
   const deadlineTimestamp = Math.floor(deadlineDateTime.getTime() / 1000);
-  
+
   const now = Math.floor(Date.now() / 1000);
   if (deadlineTimestamp <= now - 60) {
     showToastMessage('截止时间必须在未来', 'error');
     isSettingDeadline.value = false;
     return;
   }
-  
+
   const todoId = dialogTodo.value.id;
   const todoIndex = todos.value.findIndex(t => t.id === todoId);
-  
+
   if (todoIndex !== -1) {
-    // 创建新的 todo 对象，触发响应式更新
     const now = Math.floor(Date.now() / 1000);
     const updatedTodo = { ...todos.value[todoIndex], deadline: deadlineTimestamp, updatedAt: now };
     todos.value[todoIndex] = updatedTodo;
-
-    // 立即关闭对话框
     closeDeadlineDialog();
-
-    // 异步保存数据（不等待）
     saveSingleTodo(todos.value[todoIndex]);
-    
-    // 显示成功提示
     showToastMessage('截止时间设置成功', 'success');
   } else {
     isSettingDeadline.value = false;
   }
 }
 
-// 设置截止时间（已废弃，逻辑已移至 handleDeadlineConfirm）
-function setDeadline() {
-  // 此函数已不再使用，保留以防其他地方调用
-  console.warn('setDeadline() 已废弃，请使用 handleDeadlineConfirm()');
-}
-
-// 移除截止时间
 function removeDeadline() {
   if (!contextMenuTodo.value) return;
-  
+
   const todoId = contextMenuTodo.value.id;
   hideContextMenu();
-  
+
   const todoIndex = todos.value.findIndex(t => t.id === todoId);
   if (todoIndex !== -1) {
     const now = Math.floor(Date.now() / 1000);
@@ -772,117 +692,82 @@ function removeDeadline() {
   }
 }
 
-// 显示 Toast 提示
 function showToastMessage(message: string, type: 'error' | 'success' | 'warning' = 'error') {
   toastMessage.value = message;
   toastType.value = type;
   showToast.value = true;
-  
+
   setTimeout(() => {
     showToast.value = false;
   }, 1000);
 }
 
-// 上移分组
 function moveGroupUp(groupId: string) {
-  console.log('moveGroupUp called:', groupId);
   const index = sortedGroups.value.findIndex(g => g.id === groupId);
-  console.log('Current index:', index, 'Total groups:', sortedGroups.value.length);
-  
+
   if (index <= 0) {
-    console.log('Already at top');
-    return; // 已经在最上面
+    return;
   }
-  
-  // 交换 order
+
   const currentGroup = sortedGroups.value[index];
   const prevGroup = sortedGroups.value[index - 1];
-  
-  console.log('Swapping:', currentGroup.name, 'with', prevGroup.name);
-  
+
   const tempOrder = currentGroup.order;
   currentGroup.order = prevGroup.order;
   prevGroup.order = tempOrder;
-  
-  console.log('New order:', sortedGroups.value.map(g => `${g.name}(${g.order})`));
-  
+
   saveGroupData();
 }
 
-// 下移分组
 function moveGroupDown(groupId: string) {
-  console.log('moveGroupDown called:', groupId);
   const index = sortedGroups.value.findIndex(g => g.id === groupId);
-  console.log('Current index:', index, 'Total groups:', sortedGroups.value.length);
-  
+
   if (index < 0 || index >= sortedGroups.value.length - 1) {
-    console.log('Already at bottom');
-    return; // 已经在最下面
+    return;
   }
-  
-  // 交换 order
+
   const currentGroup = sortedGroups.value[index];
   const nextGroup = sortedGroups.value[index + 1];
-  
-  console.log('Swapping:', currentGroup.name, 'with', nextGroup.name);
-  
+
   const tempOrder = currentGroup.order;
   currentGroup.order = nextGroup.order;
   nextGroup.order = tempOrder;
-  
-  console.log('New order:', sortedGroups.value.map(g => `${g.name}(${g.order})`));
-  
+
   saveGroupData();
 }
 
-// 处理拖动开始
 function handleDragStart(todo: Todo) {
-  console.log('拖动开始:', todo.text, '来自分组:', todo.groupId);
   draggedTodo.value = todo;
   dragSourceGroupId.value = todo.groupId;
 }
 
-// 处理拖动结束
 function handleDragEnd() {
-  console.log('拖动结束');
   draggedTodo.value = null;
   dragSourceGroupId.value = null;
 }
 
-// 处理拖放到分组标题
 function handleDropOnGroupHeader(targetGroupId: string) {
-  console.log('拖放到分组标题:', targetGroupId);
-  
   if (!draggedTodo.value || !dragSourceGroupId.value) {
-    console.log('没有拖动的任务');
     return;
   }
-  
-  // 如果拖到同一个分组，不做处理
+
   if (dragSourceGroupId.value === targetGroupId) {
-    console.log('拖到同一个分组，忽略');
     return;
   }
-  
+
   const todoIndex = todos.value.findIndex(t => t.id === draggedTodo.value!.id);
   if (todoIndex === -1) {
-    console.log('找不到任务');
     return;
   }
-  
-  // 获取目标分组的最大 order
+
   const targetGroupTodos = getGroupTodos(targetGroupId, false);
-  const maxOrder = targetGroupTodos.length > 0 
+  const maxOrder = targetGroupTodos.length > 0
     ? Math.max(...targetGroupTodos.map(t => t.order))
     : -1;
-  
-  // 更新任务的分组和顺序（放到末尾）
+
   todos.value[todoIndex].groupId = targetGroupId;
   todos.value[todoIndex].order = maxOrder + 1;
-  
-  console.log(`任务 "${draggedTodo.value.text}" 从分组 "${dragSourceGroupId.value}" 移动到分组 "${targetGroupId}" 的末尾`);
-  
-  // 重新计算源分组的 order
+
   const sourceGroupTodos = getGroupTodos(dragSourceGroupId.value, false);
   sourceGroupTodos.forEach((t, index) => {
     const idx = todos.value.findIndex(item => item.id === t.id);
@@ -890,20 +775,14 @@ function handleDropOnGroupHeader(targetGroupId: string) {
       todos.value[idx].order = index;
     }
   });
-  
-  // 保存到后端
+
   saveTodoData();
-  
-  // 清除拖动状态
+
   draggedTodo.value = null;
   dragSourceGroupId.value = null;
 }
 
-// 处理任务重新排序
 function handleTodoReorder(groupId: string, newOrder: Todo[]) {
-  console.log('任务重新排序:', groupId, newOrder.map(t => t.text));
-  
-  // 更新任务的 order 字段和 groupId
   newOrder.forEach((todo, index) => {
     const todoIndex = todos.value.findIndex(t => t.id === todo.id);
     if (todoIndex !== -1) {
@@ -911,27 +790,17 @@ function handleTodoReorder(groupId: string, newOrder: Todo[]) {
       todos.value[todoIndex].groupId = groupId;
     }
   });
-  
-  // 保存到后端
   saveTodoData();
 }
 
-// 处理任务跨分组拖拽
 function handleTodoChange(groupId: string, event: any) {
-  console.log('任务拖拽变化:', groupId, event);
-  
-  // 当任务被添加到这个分组时
   if (event.added) {
     const todo = event.added.element;
-    // const newIndex = event.added.newIndex; // 暂时不需要使用
     const todoIndex = todos.value.findIndex(t => t.id === todo.id);
-    
+
     if (todoIndex !== -1) {
-      // 更新任务的分组ID
       todos.value[todoIndex].groupId = groupId;
-      console.log(`任务 "${todo.text}" 从分组 "${dragSourceGroupId.value}" 移动到分组 "${groupId}"`);
-      
-      // 重新计算目标分组所有任务的 order
+
       const targetGroupTodos = getGroupTodos(groupId, false);
       targetGroupTodos.forEach((t, index) => {
         const idx = todos.value.findIndex(item => item.id === t.id);
@@ -939,8 +808,7 @@ function handleTodoChange(groupId: string, event: any) {
           todos.value[idx].order = index;
         }
       });
-      
-      // 如果有源分组，重新计算源分组的 order
+
       if (dragSourceGroupId.value && dragSourceGroupId.value !== groupId) {
         const sourceGroupTodos = getGroupTodos(dragSourceGroupId.value, false);
         sourceGroupTodos.forEach((t, index) => {
@@ -950,22 +818,15 @@ function handleTodoChange(groupId: string, event: any) {
           }
         });
       }
-      
-      // 保存到后端
+
       saveTodoData();
     }
   }
-  
-  // 当任务在同一分组内移动时
+
   if (event.moved) {
-    console.log('任务在分组内移动:', groupId, event.moved);
-    // 不需要在这里处理，reorder 事件会处理
   }
-  
-  // 当任务从这个分组移除时
+
   if (event.removed) {
-    console.log('任务从分组移除:', groupId);
-    // 重新计算该分组剩余任务的 order
     const groupTodos = getGroupTodos(groupId, false);
     groupTodos.forEach((todo, index) => {
       const todoIndex = todos.value.findIndex(t => t.id === todo.id);
@@ -973,53 +834,10 @@ function handleTodoChange(groupId: string, event: any) {
         todos.value[todoIndex].order = index;
       }
     });
-    
-    // 保存到后端
     saveTodoData();
   }
 }
 
-// 保存单个任务变更（只写入被修改的任务到文件，不重写全部）
-function saveSingleTodo(todo: Todo) {
-  invoke('update_single_todo', {
-    todo: {
-      id: todo.id,
-      text: todo.text,
-      completed: todo.completed,
-      created_at: todo.createdAt,
-      completed_at: todo.completedAt || null,
-      deadline: todo.deadline || null,
-      order: todo.order,
-      group_id: todo.groupId,
-      priority: todo.priority || 0,
-      updated_at: todo.updatedAt,
-      is_deleted: todo.isDeleted || false
-    }
-  }).then(() => {
-    triggerSync();
-  }).catch(error => {
-    console.error('保存任务失败:', error);
-  });
-}
-
-// 保存单个分组变更（只写入被修改的分组到文件，不重写全部）
-function saveSingleGroup(group: TodoGroup) {
-  invoke('update_single_group', {
-    group: {
-      id: group.id,
-      name: group.name,
-      order: group.order,
-      collapsed: group.collapsed,
-      updated_at: group.updatedAt
-    }
-  }).then(() => {
-    triggerSync();
-  }).catch(error => {
-    console.error('保存分组失败:', error);
-  });
-}
-
-// 保存任务数据（异步，不等待完成，不阻塞UI）
 function saveTodoData() {
   try {
     const todosForBackend = todos.value.map(todo => ({
@@ -1036,12 +854,10 @@ function saveTodoData() {
       is_deleted: todo.isDeleted || false
     }));
 
-    // 异步保存，不等待结果
     invoke('save_todo_data_with_groups', {
       todos: todosForBackend
     }).then(() => {
       console.log('任务数据保存成功');
-      // 触发同步
       triggerSync();
     }).catch(error => {
       console.error('保存任务数据失败:', error);
@@ -1051,7 +867,46 @@ function saveTodoData() {
   }
 }
 
-// 保存任务数据并等待完成（用于关键操作）
+// 保存单个任务变更（只写入被修改的任务，不重写全部）
+function saveSingleTodo(todo: any) {
+  invoke('update_single_todo', {
+    todo: {
+      id: todo.id,
+      text: todo.text,
+      completed: todo.completed,
+      created_at: todo.createdAt,
+      completed_at: todo.completedAt || null,
+      deadline: todo.deadline || null,
+      order: todo.order,
+      group_id: todo.groupId,
+      priority: todo.priority || 0,
+      updated_at: todo.updatedAt,
+      is_deleted: todo.isDeleted
+    }
+  }).then(() => {
+    triggerSync();
+  }).catch(error => {
+    console.error('保存任务失败:', error);
+  });
+}
+
+// 保存单个分组变更
+function saveSingleGroup(group: any) {
+  invoke('update_single_group', {
+    group: {
+      id: group.id,
+      name: group.name,
+      order: group.order,
+      collapsed: group.collapsed,
+      updated_at: group.updatedAt
+    }
+  }).then(() => {
+    triggerSync();
+  }).catch(error => {
+    console.error('保存分组失败:', error);
+  });
+}
+
 async function saveTodoDataAndWait() {
   try {
     const todosForBackend = todos.value.map(todo => ({
@@ -1068,20 +923,17 @@ async function saveTodoDataAndWait() {
       is_deleted: todo.isDeleted || false
     }));
 
-    // 等待保存完成
     await invoke('save_todo_data_with_groups', {
       todos: todosForBackend
     });
     console.log('任务数据保存成功');
   } catch (error) {
     console.error('保存任务数据失败:', error);
-    throw error; // 重新抛出错误，让调用者知道保存失败
+    throw error;
   }
 }
 
-// 保存分组数据（异步，不阻塞UI）
 async function saveGroupData() {
-  // 使用 Promise.resolve() 确保异步执行，不阻塞主线程
   await Promise.resolve();
 
   try {
@@ -1092,8 +944,7 @@ async function saveGroupData() {
       collapsed: group.collapsed,
       updated_at: group.updatedAt
     }));
-    
-    // 异步保存，不等待结果
+
     invoke('save_group_data', {
       groups: groupsForBackend
     }).then(() => {
@@ -1106,13 +957,12 @@ async function saveGroupData() {
   }
 }
 
-// 加载任务数据
 async function loadTodoData() {
   try {
     const data = await invoke('load_todo_data_with_groups') as {
       todos: { id: string; text: string; completed: boolean; created_at: number; completed_at?: number; deadline?: number; order: number; group_id: string; priority?: number; updated_at?: number; is_deleted?: boolean }[]
     };
-    
+
     todos.value = data.todos.map((todo, index) => ({
       id: todo.id,
       text: todo.text,
@@ -1120,13 +970,13 @@ async function loadTodoData() {
       createdAt: todo.created_at,
       completedAt: todo.completed_at,
       deadline: todo.deadline,
-      order: todo.order ?? index, // 如果没有order，使用索引
-      groupId: todo.group_id || 'default', // 如果没有groupId，使用default
-      priority: todo.priority ?? 0, // 如果没有priority，默认为0
+      order: todo.order ?? index,
+      groupId: todo.group_id || 'default',
+      priority: todo.priority ?? 0,
       updatedAt: todo.updated_at ?? Math.floor(Date.now() / 1000),
       isDeleted: todo.is_deleted ?? false
     }));
-    
+
     console.log('任务数据加载成功');
   } catch (error) {
     console.error('加载任务数据失败:', error);
@@ -1134,7 +984,6 @@ async function loadTodoData() {
   }
 }
 
-// 加载分组数据
 async function loadGroupData() {
   try {
     const data = await invoke('load_group_data') as {
@@ -1154,7 +1003,6 @@ async function loadGroupData() {
   initializeDefaultGroup();
 }
 
-// 加载日期信息
 async function loadDateInfo() {
   try {
     const data = await invoke('get_current_date') as DateInfo;
@@ -1164,7 +1012,6 @@ async function loadDateInfo() {
   }
 }
 
-// 加载应用设置
 async function loadAppSettings() {
   try {
     const settings = await invoke('load_app_settings') as {
@@ -1187,12 +1034,10 @@ async function loadAppSettings() {
   }
 }
 
-// 切换视图
 function toggleView() {
   isTimelineView.value = !isTimelineView.value;
 }
 
-// 处理时间轴视图中的任务切换
 function handleTimelineToggle(todo: Todo) {
   const todoIndex = todos.value.findIndex(t => t.id === todo.id);
   if (todoIndex !== -1) {
@@ -1206,7 +1051,6 @@ function handleTimelineToggle(todo: Todo) {
   }
 }
 
-// 处理时间轴视图中的任务删除（逻辑删除）
 function handleTimelineDelete(todo: Todo) {
   const todoIndex = todos.value.findIndex(t => t.id === todo.id);
   if (todoIndex !== -1) {
@@ -1217,86 +1061,85 @@ function handleTimelineDelete(todo: Todo) {
   }
 }
 
-// 打开设置窗口
-async function openSettings() {
-  try {
-    await invoke('open_settings_window');
-  } catch (error) {
-    console.error('打开设置窗口失败:', error);
-  }
+function openSettings() {
+  router.push('/settings');
 }
 
-// 监听主题变化
-async function listenThemeChange() {
-  const currentWindow = getCurrentWindow();
-  await currentWindow.listen('theme-changed', (event) => {
-    const theme = event.payload as string;
-    document.body.className = theme === 'dark' ? 'dark-theme' : '';
+function listenThemeChange() {
+  window.addEventListener('storage', (event) => {
+    if (event.key === 'deskhive_settings' && event.newValue) {
+      try {
+        const settings = JSON.parse(event.newValue);
+        if (settings.theme) {
+          document.body.className = settings.theme === 'dark' ? 'dark-theme' : '';
+        }
+      } catch (e) {
+        // ignore parse errors
+      }
+    }
   });
 }
 
-// 监听高优先级颜色变化
-async function listenPriorityColorChange() {
-  const currentWindow = getCurrentWindow();
-  await currentWindow.listen('priority-color-changed', (event) => {
-    priorityColor.value = event.payload as string;
+function listenPriorityColorChange() {
+  window.addEventListener('storage', (event) => {
+    if (event.key === 'deskhive_settings' && event.newValue) {
+      try {
+        const settings = JSON.parse(event.newValue);
+        if (settings.priority_color) {
+          priorityColor.value = settings.priority_color;
+        }
+      } catch (e) {
+        // ignore parse errors
+      }
+    }
   });
 }
 
-// 启动倒计时更新定时器（优化版：只在用户不交互时更新）
 function startCountdownTimer() {
-  // 清理旧的定时器
   if (countdownTimer.value) {
     clearInterval(countdownTimer.value);
   }
-  
+
   let lastInteractionTime = Date.now();
-  
-  // 监听用户交互，记录最后交互时间
+
   const updateInteractionTime = () => {
     lastInteractionTime = Date.now();
   };
-  
+
   document.addEventListener('mousedown', updateInteractionTime);
   document.addEventListener('contextmenu', updateInteractionTime);
   document.addEventListener('click', updateInteractionTime);
-  
-  // 每30秒更新一次时间戳
+
   countdownTimer.value = window.setInterval(() => {
-    // 只在用户最近5秒内没有交互时才更新
     const timeSinceLastInteraction = Date.now() - lastInteractionTime;
     if (timeSinceLastInteraction < 5000) {
-      return; // 用户正在交互，跳过更新
+      return;
     }
-    
-    // 检查是否有需要更新的任务（排除已删除的）
+
     const hasTimeSensitiveTasks = todos.value.some(t =>
       !t.isDeleted && (
-        (!t.completed && t.deadline) || // 有截止时间的未完成任务
-        (!t.completed && Date.now() - t.createdAt * 1000 >= 86400000) // 创建超过1天的未完成任务
+        (!t.completed && t.deadline) ||
+        (!t.completed && Date.now() - t.createdAt * 1000 >= 86400000)
       )
     );
-    
+
     if (hasTimeSensitiveTasks) {
-      // 使用 requestAnimationFrame 在浏览器空闲时更新
       requestAnimationFrame(() => {
         currentTimestamp.value = Date.now();
       });
     }
-  }, 30000); // 30秒检查一次
+  }, 30000);
 }
 
-// ---- 同步相关 ----
+// ---- Sync ----
 
 let lastSyncTime = 0;
 
-// 同步回调：由定时器或手动触发
 async function onSyncTimerTick() {
   if (!syncEnabled) return;
   const result = await pushAndPull(todos.value, groups.value, lastSyncTime);
   if (result) {
     lastSyncTime = result.serverTime;
-    // 合并服务端数据到本地（仅当服务端数据更新）
     for (const serverTodo of result.todos) {
       const localIndex = todos.value.findIndex(t => t.id === serverTodo.id);
       if (localIndex !== -1) {
@@ -1305,7 +1148,6 @@ async function onSyncTimerTick() {
         if (localTodo.isDeleted && !serverTodo.isDeleted) {
           continue;
         }
-        // 服务端更新较新则覆盖本地
         if (serverTodo.updatedAt > localTodo.updatedAt) {
           todos.value[localIndex] = serverTodo;
         }
@@ -1314,7 +1156,6 @@ async function onSyncTimerTick() {
         todos.value.push(serverTodo);
       }
     }
-    const mergedGroupIds = new Set<string>();
     for (const serverGroup of result.groups) {
       const localIndex = groups.value.findIndex(g => g.id === serverGroup.id);
       if (localIndex !== -1) {
@@ -1324,30 +1165,22 @@ async function onSyncTimerTick() {
       } else {
         groups.value.push(serverGroup);
       }
-      mergedGroupIds.add(serverGroup.id);
     }
     console.log('同步完成:', result.todos.length, 'tasks,', result.groups.length, 'groups');
   }
 }
 
-// 数据变更时触发同步
 let syncPending = false;
 async function triggerSync() {
   if (!syncEnabled || !syncServerUrl) return;
   if (syncPending) return;
   syncPending = true;
-  // 延迟执行，避免频繁保存时多次触发
-  setTimeout(async () => {
-    syncPending = false;
-    await onSyncTimerTick();
-  }, 2000);
+  await onSyncTimerTick();
 }
 
-// 同步配置
 let syncEnabled = false;
 let syncServerUrl = '';
 
-// 从设置初始化同步
 async function initSyncFromSettings() {
   try {
     const settings = await invoke('load_app_settings') as any;
@@ -1356,7 +1189,7 @@ async function initSyncFromSettings() {
 
     if (syncEnabled && syncServerUrl) {
       initSync(true, syncServerUrl, onSyncTimerTick);
-      await onSyncTimerTick(); // 启动时拉取一次
+      await onSyncTimerTick();
       startTimer();
     }
   } catch (err) {
@@ -1364,7 +1197,6 @@ async function initSyncFromSettings() {
   }
 }
 
-// 阻止浏览器默认右键菜单
 function preventDefaultContextMenu(event: MouseEvent) {
   const target = event.target as HTMLElement;
   if (!target.closest('.todo-item') && !target.closest('.group-header')) {
@@ -1372,49 +1204,36 @@ function preventDefaultContextMenu(event: MouseEvent) {
   }
 }
 
-// 提供当前时间戳给子组件（用于倒计时实时更新）
 provide('currentTimestamp', currentTimestamp);
 
-// 组件挂载
 onMounted(async () => {
   document.addEventListener('contextmenu', preventDefaultContextMenu);
-  
+
   await loadGroupData();
   await loadTodoData();
   await loadAppSettings();
   await loadDateInfo();
-  await listenThemeChange();
-  await listenPriorityColorChange();
-  
+  listenThemeChange();
+  listenPriorityColorChange();
+
   startCountdownTimer();
   await initSyncFromSettings();
 
-  const currentWindow = getCurrentWindow();
-  await currentWindow.listen('drag-setting-changed', (event) => {
-    isDragDisabled.value = event.payload as boolean;
-  });
-  await currentWindow.listen('data-synced', async () => {
-    console.log('收到数据同步通知，重新加载数据');
-    await loadGroupData();
+  // WebSocket: 服务端数据变更时自动刷新
+  startWS();
+  onDataUpdated(async () => {
+    console.log('[WS] 数据已更新，重新加载');
     await loadTodoData();
-  });
-  await currentWindow.listen('sync-config-changed', (event) => {
-    const payload = event.payload as { sync_enabled: boolean; sync_server_url: string };
-    console.log('收到同步配置变更通知:', payload);
-    syncEnabled = payload.sync_enabled;
-    syncServerUrl = payload.sync_server_url;
-    updateConfig(syncEnabled, syncServerUrl);
+    await loadGroupData();
   });
 });
 
-// 组件卸载
 onUnmounted(() => {
-  // 清理定时器（如果存在）
   if (countdownTimer.value) {
     clearInterval(countdownTimer.value);
   }
   stopTimer();
-  // 移除事件监听器
+  stopWS();
   document.removeEventListener('contextmenu', preventDefaultContextMenu);
 });
 </script>
@@ -1572,8 +1391,8 @@ header {
 }
 
 .todo-container {
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;  /* Firefox */
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
 .groups-container {
@@ -1601,7 +1420,6 @@ header {
   position: relative;
 }
 
-/* 分组列表动画 */
 .group-list-move {
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -1738,7 +1556,6 @@ header {
   }
 }
 
-/* 视图切换动画 */
 .view-fade-enter-active,
 .view-fade-leave-active {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -1758,7 +1575,6 @@ header {
   transition-delay: 0.15s;
 }
 
-/* 夜间主题 */
 body.dark-theme {
   background: #0a0a0a;
   color: #e0e0e0;
@@ -1826,8 +1642,4 @@ body.dark-theme .group-icon circle {
 body.dark-theme .group-icon path {
   stroke: white;
 }
-
-
-
-
 </style>

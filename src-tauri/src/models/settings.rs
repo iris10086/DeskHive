@@ -25,6 +25,10 @@ pub struct AppSettings {
     pub enable_deadline_notification: bool, // 是否启用截止时间通知
     #[serde(default = "default_notification_minutes_before")]
     pub notification_minutes_before: u32, // 提前多少分钟通知
+    #[serde(default = "default_sync_enabled")]
+    pub sync_enabled: bool, // 是否启用多端同步
+    #[serde(default = "default_sync_server_url")]
+    pub sync_server_url: String, // 同步服务器地址
 }
 
 impl Default for AppSettings {
@@ -42,6 +46,8 @@ impl Default for AppSettings {
             timeline_deadline_priority: true,
             enable_deadline_notification: false,
             notification_minutes_before: 30,
+            sync_enabled: false,
+            sync_server_url: "".to_string(),
         }
     }
 }
@@ -85,4 +91,12 @@ pub fn default_enable_deadline_notification() -> bool {
 
 pub fn default_notification_minutes_before() -> u32 {
     30
+}
+
+pub fn default_sync_enabled() -> bool {
+    false
+}
+
+pub fn default_sync_server_url() -> String {
+    "".to_string()
 }

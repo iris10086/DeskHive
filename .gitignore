@@ -37,3 +37,14 @@ coverage
 .kiro/hooks/tauri-service-restart.kiro.hook
 /.qoder/
 /.qoder/
+
+# Python
+__pycache__/
+*.pyc
+deskhive_server/static/  # 由 web/ 构建生成，不直接提交
+
+# Claude config
+.claude/
+
+# Desktop app build
+src-tauri/target/
