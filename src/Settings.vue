@@ -626,8 +626,7 @@ const settings = reactive<AppSettings>({
   timeline_deadline_priority: true,
   enable_deadline_notification: false,
   notification_minutes_before: 30,
-  window_size: 'medium'
-  notification_minutes_before: 30,
+  window_size: 'medium',
   sync_enabled: false,
   sync_server_url: ''
 })
@@ -856,26 +855,6 @@ function openBlog() {
 // 检查新版本
 function checkUpdate() {
   window.open('https://www.feijimiao.cn/deskhive', '_blank')
-}
-
-// 测试通知
-async function testNotification() {
-  try {
-    await invoke('test_notification')
-    console.log('测试通知已发送')
-  } catch (error) {
-    console.error('发送测试通知失败:', error)
-  }
-}
-
-// 打开日志文件
-async function openLogFile() {
-  try {
-    await invoke('open_log_file')
-    console.log('日志目录已打开')
-  } catch (error) {
-    console.error('打开日志目录失败:', error)
-  }
 }
 
 // 测试通知
