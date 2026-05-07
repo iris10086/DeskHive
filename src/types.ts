@@ -29,3 +29,17 @@ export interface DateInfo {
   lunar_month: string;   // 农历月份
   lunar_day: string;     // 农历日期
 }
+
+export interface AppSettings {
+  opacity: number;
+  disable_drag: boolean;
+  auto_start: boolean;
+  silent_start: boolean;
+  theme: string;
+  priority_color: string;
+  window_level: string;
+  timeline_deadline_priority: boolean;
+  enable_deadline_notification: boolean;
+  notification_minutes_before: number;
+  window_size: string; // 'small' | 'medium' | 'large'
+}

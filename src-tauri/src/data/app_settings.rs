@@ -30,27 +30,56 @@ pub async fn save_app_settings(app: tauri::AppHandle, settings: AppSettings) -> 
     let data_dir = get_data_dir(&app)?;
     let file_path = data_dir.join("app_settings.json");
     
+    log::info!("保存应用设置到: {:?}", file_path);
+    
     // 处理开机自启动设置
     if let Ok(old_settings) = crate::data::load_app_settings(app.clone()).await {
         // 如果开机自启动设置发生了变化，则更新系统设置
         if old_settings.auto_start != settings.auto_start {
+            log::info!("开机自启动设置已更改: {} -> {}", old_settings.auto_start, settings.auto_start);
             set_auto_start(&app, settings.auto_start)?;
         }
     } else {
         // 如果无法加载旧设置，直接应用新设置
+        log::info!("首次保存设置，应用开机自启动设置: {}", settings.auto_start);
         set_auto_start(&app, settings.auto_start)?;
     }
     
     let json_data = serde_json::to_string_pretty(&settings)
-        .map_err(|e| format!("序列化设置失败: {}", e))?;
+        .map_err(|e| {
+            log::error!("序列化设置失败: {}", e);
+            format!("序列化设置失败: {}", e)
+        })?;
     
     fs::write(&file_path, json_data)
-        .map_err(|e| format!("写入设置文件失败: {}", e))?;
+        .map_err(|e| {
+            log::error!("写入设置文件失败: {}", e);
+            format!("写入设置文件失败: {}", e)
+        })?;
+    
+    log::info!("应用设置保存成功");
     
     // 应用设置到主窗口（设置窗口保持不透明）
     if let Some(main_window) = app.get_webview_window("main") {
         // 设置透明度（只应用于主窗口）
         let _ = set_window_opacity(&main_window, settings.opacity);
+        
+        // 应用窗口尺寸
+        let (width, height) = match settings.window_size.as_str() {
+            "x-small" => (260, 380),  // 最小
+            "small" => (280, 420),    // 小
+            "medium" => (330, 520),   // 中（默认）
+            "large" => (380, 620),    // 大
+            "x-large" => (430, 720),  // 最大
+            _ => (330, 520),          // 默认为中
+        };
+        let _ = main_window.set_size(tauri::Size::Physical(tauri::PhysicalSize {
+            width,
+            height,
+        }));
+        
+        // 通知前端窗口尺寸已更改
+        let _ = main_window.emit("window-size-changed", settings.window_size.clone());
         
         // 设置窗口层级 - 与托盘菜单功能保持一致
         match settings.window_level.as_str() {
@@ -103,6 +132,7 @@ pub async fn load_app_settings(app: tauri::AppHandle) -> Result<AppSettings, Str
     
     if !file_path.exists() {
         // 如果文件不存在，返回默认设置
+        log::info!("设置文件不存在，使用默认设置");
         return Ok(AppSettings {
             opacity: 1.0,
             disable_drag: false,
@@ -116,17 +146,27 @@ pub async fn load_app_settings(app: tauri::AppHandle) -> Result<AppSettings, Str
             timeline_deadline_priority: true,
             enable_deadline_notification: false,
             notification_minutes_before: 30,
+            window_size: "medium".to_string(),
             sync_enabled: false,
             sync_server_url: "".to_string(),
         });
     }
     
+    log::info!("加载应用设置从: {:?}", file_path);
+    
     let json_data = std::fs::read_to_string(&file_path)
-        .map_err(|e| format!("读取设置文件失败: {}", e))?;
+        .map_err(|e| {
+            log::error!("读取设置文件失败: {}", e);
+            format!("读取设置文件失败: {}", e)
+        })?;
     
     let settings: AppSettings = serde_json::from_str(&json_data)
-        .map_err(|e| format!("解析设置JSON失败: {}", e))?;
+        .map_err(|e| {
+            log::error!("解析设置JSON失败: {}", e);
+            format!("解析设置JSON失败: {}", e)
+        })?;
     
+    log::info!("应用设置加载成功");
     Ok(settings)
 }
 

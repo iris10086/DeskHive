@@ -32,6 +32,32 @@
           <div class="setting-group">
             <div class="setting-item">
               <div>
+                <div class="setting-label">窗口尺寸</div>
+                <div class="setting-description">拖动滑块调整窗口大小（5个档位）</div>
+              </div>
+              <div class="setting-control">
+                <div class="size-slider-container">
+                  <input 
+                    type="range" 
+                    v-model.number="windowSizeLevel" 
+                    min="1" 
+                    max="5" 
+                    step="1"
+                    class="size-slider"
+                    @input="applyWindowSize"
+                  >
+                  <div class="size-labels">
+                    <span class="size-label" :class="{ active: windowSizeLevel === 1 }" @click="windowSizeLevel = 1; applyWindowSize()">最小</span>
+                    <span class="size-label" :class="{ active: windowSizeLevel === 2 }" @click="windowSizeLevel = 2; applyWindowSize()">小</span>
+                    <span class="size-label" :class="{ active: windowSizeLevel === 3 }" @click="windowSizeLevel = 3; applyWindowSize()">中</span>
+                    <span class="size-label" :class="{ active: windowSizeLevel === 4 }" @click="windowSizeLevel = 4; applyWindowSize()">大</span>
+                    <span class="size-label" :class="{ active: windowSizeLevel === 5 }" @click="windowSizeLevel = 5; applyWindowSize()">最大</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="setting-item">
+              <div>
                 <div class="setting-label">主窗口透明度</div>
                 <div class="setting-description">调整主窗口的透明程度，不影响设置窗口</div>
               </div>
@@ -210,6 +236,20 @@
                 <span class="input-unit">分钟</span>
               </div>
             </div>
+            <div class="setting-item">
+              <div>
+                <div class="setting-label">测试通知功能</div>
+                <div class="setting-description">发送一条测试通知，检查通知和音效是否正常工作</div>
+              </div>
+              <div class="setting-control">
+                <button class="test-btn" @click="testNotification">
+                  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 22C13.1 22 14 21.1 14 20H10C10 21.1 10.9 22 12 22M18 16V11C18 7.93 16.37 5.36 13.5 4.68V4C13.5 3.17 12.83 2.5 12 2.5C11.17 2.5 10.5 3.17 10.5 4V4.68C7.64 5.36 6 7.92 6 11V16L4 18V19H20V18L18 16M16 17H8V11C8 8.52 9.51 6.5 12 6.5C14.49 6.5 16 8.52 16 11V17Z" fill="currentColor"/>
+                  </svg>
+                  测试通知
+                </button>
+              </div>
+            </div>
 
           </div>
         </div>
@@ -324,10 +364,12 @@
                 <p>• 提前时间：设置提前多少分钟提醒（默认 30 分钟）</p>
                 <p>• 通知内容：显示剩余时间、任务内容、截止时间、优先级</p>
                 <p>• 通知位置：Windows 系统右下角通知中心</p>
-                <p>• 提示音：通知时播放系统提示音</p>
+                <p>• 系统音效：通知时播放 Windows 系统通知音效</p>
+                <p>• 测试功能：在"使用设置"中点击"测试通知"按钮验证功能</p>
                 <p>• 权限设置：如无通知，请检查 Windows 通知权限</p>
                 
                 <h3>⚙️ 外观设置</h3>
+                <p>• 窗口尺寸：拖动滑块选择5个档位（最小、小、中、大、最大），适应不同屏幕和使用习惯</p>
                 <p>• 透明度：调整主窗口透明度（50%-100%），设置窗口保持不透明</p>
                 <p>• 主题模式：切换日间/夜间主题，夜间模式更护眼</p>
                 <p>• 优先级颜色：自定义高优先级任务的圆点颜色</p>
@@ -419,12 +461,54 @@
                 </button>
               </div>
             </div>
+            <div class="setting-item">
+              <div>
+                <div class="setting-label">运行日志</div>
+                <div class="setting-description">查看应用运行日志和错误信息</div>
+              </div>
+              <div class="setting-control">
+                <button class="log-btn" @click="openLogFile">
+                  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M14 2H6C4.9 2 4 2.9 4 4V20C4 21.1 4.9 22 6 22H18C19.1 22 20 21.1 20 20V8L14 2M18 20H6V4H13V9H18V20M8 15.5C8 14.12 9.12 13 10.5 13S13 14.12 13 15.5C13 16.88 11.88 18 10.5 18S8 16.88 8 15.5M14 19H7V18.5C7 17.12 8.12 16 9.5 16H11.5C12.88 16 14 17.12 14 18.5V19Z" fill="currentColor"/>
+                  </svg>
+                  查看日志
+                </button>
+              </div>
+            </div>
           </div>
 
           <div class="section-title" style="margin-top: 24px;">版本更新</div>
           <div class="setting-group">
             <div class="setting-item">
               <div class="update-content">
+                <h3>v1.0.2 (2026-01-06)</h3>
+                <h4>✨ 新增功能</h4>
+                <p>• 5档位窗口尺寸：提供最小、小、中、大、最大5个精细档位</p>
+                <p>• 滑块控件：使用直观的滑块拖动选择窗口尺寸</p>
+                <p>• 响应式设计：窗口内容根据尺寸自动缩放，保持视觉比例</p>
+                <p>• 点击标签切换：可直接点击档位标签快速切换尺寸</p>
+                <p>• 通知音效：任务截止时间通知添加系统音效提醒</p>
+                <p>• 测试通知按钮：在设置页面添加测试通知功能按钮</p>
+                
+                <h4>🎨 界面优化</h4>
+                <p>• 滑块样式优化：渐变色轨道，蓝色圆形按钮</p>
+                <p>• 悬停动画效果：滑块按钮悬停时放大，提供视觉反馈</p>
+                <p>• 当前档位高亮：选中的档位标签蓝色加粗显示</p>
+                <p>• 夜间主题适配：滑块在夜间主题下完美显示</p>
+                
+                <h4>📏 尺寸范围</h4>
+                <p>• 档位1 - 最小：260×380px，适合小屏幕</p>
+                <p>• 档位2 - 小：280×420px，紧凑布局</p>
+                <p>• 档位3 - 中：330×520px，默认推荐</p>
+                <p>• 档位4 - 大：380×620px，大屏幕</p>
+                <p>• 档位5 - 最大：430×720px，超大屏幕</p>
+                
+                <h4>🔔 通知增强</h4>
+                <p>• 系统音效：使用 Windows API 播放系统通知音效</p>
+                <p>• 异步播放：音效异步播放，不阻塞程序运行</p>
+                <p>• 测试功能：可在设置中一键测试通知和音效</p>
+                <p>• 双重提醒：视觉通知 + 听觉音效，不易错过</p>
+                
                 <h3>v1.0.0 (2025-12-11)</h3>
                 <h4>✨ 新增功能</h4>
                 <p>• 时间轴视图：全新的任务时间树展示方式，按时间线查看任务</p>
@@ -467,7 +551,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, watch } from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted, watch } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 
@@ -482,6 +566,7 @@ interface AppSettings {
   timeline_deadline_priority: boolean
   enable_deadline_notification: boolean
   notification_minutes_before: number
+  window_size: string
   sync_enabled: boolean
   sync_server_url: string
 }
@@ -541,6 +626,8 @@ const settings = reactive<AppSettings>({
   timeline_deadline_priority: true,
   enable_deadline_notification: false,
   notification_minutes_before: 30,
+  window_size: 'medium'
+  notification_minutes_before: 30,
   sync_enabled: false,
   sync_server_url: ''
 })
@@ -550,6 +637,30 @@ const opacityValue = computed({
   get: () => settings.opacity,
   set: (value: string | number) => {
     settings.opacity = typeof value === 'string' ? parseFloat(value) : value
+  }
+})
+
+// 窗口尺寸档位的计算属性
+const windowSizeLevel = computed({
+  get: () => {
+    const sizeMap: Record<string, number> = {
+      'x-small': 1,
+      'small': 2,
+      'medium': 3,
+      'large': 4,
+      'x-large': 5
+    }
+    return sizeMap[settings.window_size] || 3
+  },
+  set: (level: number) => {
+    const levelMap: Record<number, string> = {
+      1: 'x-small',
+      2: 'small',
+      3: 'medium',
+      4: 'large',
+      5: 'x-large'
+    }
+    settings.window_size = levelMap[level] || 'medium'
   }
 })
 
@@ -593,11 +704,31 @@ async function applyWindowLevel() {
       auto_start: settings.auto_start,
       theme: settings.theme,
       priority_color: settings.priority_color,
-      window_level: settings.window_level
+      window_level: settings.window_level,
+      window_size: settings.window_size
     }
     await invoke('save_app_settings', { settings: tempSettings })
   } catch (error) {
     console.error('应用窗口层级失败:', error)
+  }
+}
+
+// 实时应用窗口尺寸设置
+async function applyWindowSize() {
+  try {
+    // 临时保存并应用窗口尺寸设置以实现预览
+    const tempSettings = {
+      opacity: settings.opacity,
+      disable_drag: settings.disable_drag,
+      auto_start: settings.auto_start,
+      theme: settings.theme,
+      priority_color: settings.priority_color,
+      window_level: settings.window_level,
+      window_size: settings.window_size
+    }
+    await invoke('save_app_settings', { settings: tempSettings })
+  } catch (error) {
+    console.error('应用窗口尺寸失败:', error)
   }
 }
 
@@ -626,9 +757,10 @@ async function saveSettingsImmediately() {
       window_level: settings.window_level,
       timeline_deadline_priority: Boolean(settings.timeline_deadline_priority),
       enable_deadline_notification: Boolean(settings.enable_deadline_notification),
-      notification_minutes_before: typeof settings.notification_minutes_before === 'string'
-        ? parseInt(settings.notification_minutes_before)
+      notification_minutes_before: typeof settings.notification_minutes_before === 'string' 
+        ? parseInt(settings.notification_minutes_before) 
         : settings.notification_minutes_before,
+      window_size: settings.window_size,
       sync_enabled: Boolean(settings.sync_enabled),
       sync_server_url: settings.sync_server_url || ''
     }
@@ -724,6 +856,46 @@ function openBlog() {
 // 检查新版本
 function checkUpdate() {
   window.open('https://www.feijimiao.cn/deskhive', '_blank')
+}
+
+// 测试通知
+async function testNotification() {
+  try {
+    await invoke('test_notification')
+    console.log('测试通知已发送')
+  } catch (error) {
+    console.error('发送测试通知失败:', error)
+  }
+}
+
+// 打开日志文件
+async function openLogFile() {
+  try {
+    await invoke('open_log_file')
+    console.log('日志目录已打开')
+  } catch (error) {
+    console.error('打开日志目录失败:', error)
+  }
+}
+
+// 测试通知
+async function testNotification() {
+  try {
+    await invoke('test_notification')
+    console.log('测试通知已发送')
+  } catch (error) {
+    console.error('发送测试通知失败:', error)
+  }
+}
+
+// 打开日志文件
+async function openLogFile() {
+  try {
+    await invoke('open_log_file')
+    console.log('日志目录已打开')
+  } catch (error) {
+    console.error('打开日志目录失败:', error)
+  }
 }
 
 // ---- 同步相关 ----
@@ -858,6 +1030,14 @@ onMounted(async () => {
     loadSettings(),
     loadAppVersion()
   ])
+})
+
+// 组件卸载时清理定时器
+onUnmounted(() => {
+  if (saveTimeout) {
+    clearTimeout(saveTimeout)
+    saveTimeout = null
+  }
 })
 
 </script>
@@ -1848,6 +2028,48 @@ body.dark-theme .check-update-btn:hover {
   box-shadow: 0 4px 10px rgba(52, 199, 89, 0.5);
 }
 
+/* 日志按钮 */
+.log-btn {
+  padding: 6px 16px;
+  background: #5856d6;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 6px rgba(88, 86, 214, 0.3);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.log-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.log-btn:hover {
+  background: #4c4bb8;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(88, 86, 214, 0.4);
+}
+
+.log-btn:active {
+  transform: translateY(0);
+}
+
+body.dark-theme .log-btn {
+  background: #5856d6;
+  box-shadow: 0 2px 6px rgba(88, 86, 214, 0.4);
+}
+
+body.dark-theme .log-btn:hover {
+  background: #4c4bb8;
+  box-shadow: 0 4px 10px rgba(88, 86, 214, 0.5);
+}
+
 /* 第二行：二维码并排 */
 .qrcode-row {
   gap: 32px;
@@ -1916,6 +2138,138 @@ body.dark-theme .contact-text {
   color: #0a84ff;
   background: rgba(10, 132, 255, 0.15);
   border: 1px solid rgba(10, 132, 255, 0.3);
+}
+
+/* 窗口尺寸滑块样式 */
+.size-slider-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  max-width: 320px;
+}
+
+.size-slider {
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: linear-gradient(to right, #e5e7eb 0%, #007aff 50%, #e5e7eb 100%);
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+  margin: 10px 0; /* 增加上下边距，防止滑块按钮被裁剪 */
+}
+
+.size-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #007aff;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 122, 255, 0.4);
+  transition: all 0.2s ease;
+  margin-top: 0; /* 确保垂直居中 */
+}
+
+.size-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+  box-shadow: 0 3px 10px rgba(0, 122, 255, 0.6);
+}
+
+.size-slider::-webkit-slider-thumb:active {
+  transform: scale(1.05);
+}
+
+.size-slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #007aff;
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 2px 6px rgba(0, 122, 255, 0.4);
+  transition: all 0.2s ease;
+}
+
+.size-slider::-moz-range-thumb:hover {
+  transform: scale(1.15);
+  box-shadow: 0 3px 10px rgba(0, 122, 255, 0.6);
+}
+
+.size-slider::-moz-range-thumb:active {
+  transform: scale(1.05);
+}
+
+.size-slider::-moz-range-track {
+  background: transparent;
+  border: none;
+}
+
+.size-labels {
+  display: flex;
+  justify-content: space-between;
+  padding: 0;
+  position: relative;
+}
+
+.size-label {
+  font-size: 11px;
+  color: #6d6d70;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  user-select: none;
+  cursor: pointer;
+  flex: 1;
+  text-align: center;
+  padding: 2px 0;
+}
+
+.size-label:first-child {
+  text-align: left;
+}
+
+.size-label:last-child {
+  text-align: right;
+}
+
+.size-label.active {
+  color: #007aff;
+  font-weight: 700;
+  transform: scale(1.1);
+}
+
+/* 夜间主题下的滑块样式 */
+body.dark-theme .size-slider {
+  background: linear-gradient(to right, #2a2a2a 0%, #0a84ff 50%, #2a2a2a 100%);
+}
+
+body.dark-theme .size-slider::-webkit-slider-thumb {
+  background: #0a84ff;
+  box-shadow: 0 2px 6px rgba(10, 132, 255, 0.5);
+}
+
+body.dark-theme .size-slider::-webkit-slider-thumb:hover {
+  box-shadow: 0 3px 10px rgba(10, 132, 255, 0.7);
+}
+
+body.dark-theme .size-slider::-moz-range-thumb {
+  background: #0a84ff;
+  box-shadow: 0 2px 6px rgba(10, 132, 255, 0.5);
+}
+
+body.dark-theme .size-slider::-moz-range-thumb:hover {
+  box-shadow: 0 3px 10px rgba(10, 132, 255, 0.7);
+}
+
+body.dark-theme .size-label {
+  color: #808080;
+}
+
+body.dark-theme .size-label.active {
+  color: #0a84ff;
 }
 
 /* 同步设置样式 */

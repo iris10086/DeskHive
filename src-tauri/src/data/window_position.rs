@@ -28,14 +28,23 @@ pub async fn save_window_position(app: tauri::AppHandle, x: i32, y: i32) -> Resu
     let data_dir = get_data_dir(&app)?;
     let file_path = data_dir.join("window_position.json");
     
+    log::debug!("保存窗口位置: x={}, y={}", x, y);
+    
     let position = WindowPosition { x, y };
     
     let json_data = serde_json::to_string_pretty(&position)
-        .map_err(|e| format!("序列化窗口位置失败: {}", e))?;
+        .map_err(|e| {
+            log::error!("序列化窗口位置失败: {}", e);
+            format!("序列化窗口位置失败: {}", e)
+        })?;
     
     fs::write(&file_path, json_data)
-        .map_err(|e| format!("写入窗口位置文件失败: {}", e))?;
+        .map_err(|e| {
+            log::error!("写入窗口位置文件失败: {}", e);
+            format!("写入窗口位置文件失败: {}", e)
+        })?;
     
+    log::debug!("窗口位置保存成功");
     Ok(())
 }
 
@@ -46,14 +55,24 @@ pub async fn load_window_position(app: tauri::AppHandle) -> Result<Option<Window
     let file_path = data_dir.join("window_position.json");
     
     if !file_path.exists() {
+        log::debug!("窗口位置文件不存在");
         return Ok(None);
     }
     
+    log::debug!("加载窗口位置");
+    
     let json_data = fs::read_to_string(&file_path)
-        .map_err(|e| format!("读取窗口位置文件失败: {}", e))?;
+        .map_err(|e| {
+            log::error!("读取窗口位置文件失败: {}", e);
+            format!("读取窗口位置文件失败: {}", e)
+        })?;
     
     let position: WindowPosition = serde_json::from_str(&json_data)
-        .map_err(|e| format!("解析窗口位置JSON失败: {}", e))?;
+        .map_err(|e| {
+            log::error!("解析窗口位置JSON失败: {}", e);
+            format!("解析窗口位置JSON失败: {}", e)
+        })?;
     
+    log::debug!("窗口位置加载成功: x={}, y={}", position.x, position.y);
     Ok(Some(position))
 }
