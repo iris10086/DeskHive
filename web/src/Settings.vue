@@ -1,34 +1,28 @@
 <template>
   <div class="container">
-    <div class="sidebar">
-      <div class="sidebar-header">
-        <h1>设置</h1>
-      </div>
-      <div class="sidebar-menu">
+    <!-- Top Tab Navigation (mobile) -->
+    <div class="tab-bar">
+      <div class="tab-bar-scroll">
         <button
           v-for="(section, key) in sections"
           :key="key"
-          class="menu-item"
+          class="tab-item"
           :class="{ active: activeSection === key }"
           @click="activeSection = key"
         >
-          <span class="menu-item-icon" v-html="section.icon"></span>
-          {{ section.name }}
+          <span class="tab-icon" v-html="section.icon"></span>
+          <span class="tab-label">{{ section.name }}</span>
         </button>
       </div>
     </div>
 
     <div class="content">
-      <div class="content-header">
-        <h2>{{ sections[activeSection]?.name || '设置' }}</h2>
-      </div>
-
       <div class="content-body">
         <div v-if="activeSection === 'appearance'" class="setting-section">
           <div class="section-title">窗口外观</div>
           <div class="setting-group">
             <div class="setting-item">
-              <div>
+              <div class="setting-label-wrap">
                 <div class="setting-label">主窗口透明度</div>
                 <div class="setting-description">调整主窗口的透明程度，不影响设置窗口</div>
               </div>
@@ -40,12 +34,13 @@
                   max="1"
                   step="0.1"
                   @input="applyOpacityPreview"
+                  class="range-input"
                 >
                 <span class="range-value">{{ Math.round(settings.opacity * 100) }}%</span>
               </div>
             </div>
             <div class="setting-item">
-              <div>
+              <div class="setting-label-wrap">
                 <div class="setting-label">主题模式</div>
                 <div class="setting-description">切换日间或夜间主题</div>
               </div>
@@ -71,7 +66,7 @@
               </div>
             </div>
             <div class="setting-item">
-              <div>
+              <div class="setting-label-wrap">
                 <div class="setting-label">高优先级颜色</div>
                 <div class="setting-description">双击任务标记为高优先级时的圆点颜色</div>
               </div>
@@ -85,172 +80,6 @@
                   >
                   <span class="color-value">{{ settings.priority_color }}</span>
                 </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div v-if="activeSection === 'behavior'" class="setting-section">
-          <div class="section-title">窗口行为</div>
-          <div class="setting-group">
-            <div class="setting-item">
-              <div>
-                <div class="setting-label">禁止拖动窗口</div>
-                <div class="setting-description">禁用标题栏拖动功能，防止意外移动窗口</div>
-              </div>
-              <div class="setting-control">
-                <div
-                  class="toggle-switch"
-                  :class="{ active: settings.disable_drag }"
-                  @click="settings.disable_drag = !settings.disable_drag"
-                ></div>
-              </div>
-            </div>
-            <div class="setting-item">
-              <div>
-                <div class="setting-label">窗口层级</div>
-                <div class="setting-description">选择窗口显示在顶层还是桌面层</div>
-              </div>
-              <div class="setting-control">
-                <div class="radio-group">
-                  <label class="radio-option">
-                    <input
-                      type="radio"
-                      value="always_on_top"
-                      v-model="settings.window_level"
-                      @change="applyWindowLevel"
-                    >
-                    <span class="radio-label">置于顶层</span>
-                  </label>
-                  <label class="radio-option">
-                    <input
-                      type="radio"
-                      value="always_on_bottom"
-                      v-model="settings.window_level"
-                      @change="applyWindowLevel"
-                    >
-                    <span class="radio-label">置于桌面</span>
-                  </label>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="section-title" style="margin-top: 24px;">启动行为</div>
-          <div class="setting-group">
-            <div class="setting-item">
-              <div>
-                <div class="setting-label">开机自启动</div>
-                <div class="setting-description">系统启动时自动运行应用程序</div>
-              </div>
-              <div class="setting-control">
-                <div
-                  class="toggle-switch"
-                  :class="{ active: settings.auto_start }"
-                  @click="settings.auto_start = !settings.auto_start"
-                ></div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div v-if="activeSection === 'tasks'" class="setting-section">
-          <div class="section-title">时间轴设置</div>
-          <div class="setting-group">
-            <div class="setting-item">
-              <div>
-                <div class="setting-label">时间轴截止时间优先</div>
-                <div class="setting-description">开启后，有截止时间的任务在时间轴上按截止时间排序；关闭则所有任务按创建时间排序</div>
-              </div>
-              <div class="setting-control">
-                <div
-                  class="toggle-switch"
-                  :class="{ active: settings.timeline_deadline_priority }"
-                  @click="settings.timeline_deadline_priority = !settings.timeline_deadline_priority"
-                ></div>
-              </div>
-            </div>
-          </div>
-
-          <div class="section-title" style="margin-top: 24px;">倒计时提醒</div>
-          <div class="setting-group">
-            <div class="setting-item">
-              <div>
-                <div class="setting-label">启用倒计时通知</div>
-                <div class="setting-description">在任务截止前指定时间发送系统通知提醒</div>
-              </div>
-              <div class="setting-control">
-                <div
-                  class="toggle-switch"
-                  :class="{ active: settings.enable_deadline_notification }"
-                  @click="settings.enable_deadline_notification = !settings.enable_deadline_notification"
-                ></div>
-              </div>
-            </div>
-            <div v-if="settings.enable_deadline_notification" class="setting-item">
-              <div>
-                <div class="setting-label">提前提醒时间</div>
-                <div class="setting-description">在截止时间前多少分钟发送通知</div>
-              </div>
-              <div class="setting-control">
-                <input
-                  type="number"
-                  v-model.number="settings.notification_minutes_before"
-                  min="1"
-                  max="1440"
-                  class="number-input"
-                >
-                <span class="input-unit">分钟</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div v-if="activeSection === 'sync'" class="setting-section">
-          <div class="section-title">同步设置</div>
-          <div class="setting-group">
-            <div class="setting-item">
-              <div>
-                <div class="setting-label">启用多端同步</div>
-                <div class="setting-description">开启后自动与同步服务器交换数据</div>
-              </div>
-              <div class="setting-control">
-                <div
-                  class="toggle-switch"
-                  :class="{ active: settings.sync_enabled }"
-                  @click="toggleSync"
-                ></div>
-              </div>
-            </div>
-            <div class="setting-item">
-              <div>
-                <div class="setting-label">服务器地址</div>
-                <div class="setting-description">DeskHive Sync Server 的地址（如 http://192.168.1.100:8080）</div>
-              </div>
-              <div class="setting-control">
-                <input
-                  type="text"
-                  v-model="settings.sync_server_url"
-                  placeholder="http://192.168.1.100:8080"
-                  class="text-input sync-url-input"
-                  @input="onSyncUrlChange"
-                >
-              </div>
-            </div>
-            <div class="setting-item">
-              <div></div>
-              <div class="setting-control" style="gap: 8px; flex-direction: row;">
-                <button class="btn btn-secondary" @click="testSyncConnection" :disabled="syncTesting">
-                  {{ syncTesting ? '测试中...' : '测试连接' }}
-                </button>
-                <button class="btn btn-primary" @click="manualSync" :disabled="syncSyncing">
-                  {{ syncSyncing ? '同步中...' : '立即同步' }}
-                </button>
-              </div>
-            </div>
-            <div v-if="syncStatus" class="setting-item">
-              <div class="sync-status" :class="syncStatusType">
-                {{ syncStatus }}
               </div>
             </div>
           </div>
@@ -382,26 +211,12 @@
           <div class="section-title">应用信息</div>
           <div class="setting-group">
             <div class="setting-item">
-              <div>
+              <div class="setting-label-wrap">
                 <div class="setting-label">版本</div>
                 <div class="setting-description">当前应用版本号</div>
               </div>
               <div class="setting-control">
                 <span style="color: #6d6d70;">{{ appVersion }}</span>
-              </div>
-            </div>
-            <div class="setting-item">
-              <div>
-                <div class="setting-label">检查更新</div>
-                <div class="setting-description">访问官网查看最新版本</div>
-              </div>
-              <div class="setting-control">
-                <button class="check-update-btn" @click="checkUpdate">
-                  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2M12 20C7.59 20 4 16.41 4 12C4 7.59 7.59 4 12 4C16.41 4 20 7.59 20 12C20 16.41 16.41 20 12 20M16.59 7.58L10 14.17L7.41 11.59L6 13L10 17L18 9L16.59 7.58Z" fill="currentColor"/>
-                  </svg>
-                  检查新版本
-                </button>
               </div>
             </div>
           </div>
@@ -442,10 +257,8 @@
         </div>
       </div>
 
-      <div class="content-footer">
-        <button class="btn btn-primary" @click="closeWindow">
-          关闭
-        </button>
+      <div class="bottom-bar">
+        <button class="btn btn-primary" @click="closeWindow">关闭</button>
       </div>
     </div>
   </div>
@@ -473,7 +286,7 @@ interface AppSettings {
   sync_server_url: string
 }
 
-type SectionKey = 'appearance' | 'behavior' | 'tasks' | 'sync' | 'help' | 'contact' | 'about'
+type SectionKey = 'appearance' | 'help' | 'contact' | 'about'
 
 interface Section {
   name: string
@@ -489,21 +302,9 @@ const sections: Record<SectionKey, Section> = {
     name: '外观',
     icon: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C11.5 2 11 2.19 10.59 2.59L2.59 10.59C1.8 11.37 1.8 12.63 2.59 13.41L10.59 21.41C11.37 22.2 12.63 22.2 13.41 21.41L21.41 13.41C22.2 12.63 22.2 11.37 21.41 10.59L13.41 2.59C13 2.19 12.5 2 12 2M12 4L20 12L12 20L4 12L12 4M12 6C9.79 6 8 7.79 8 10C8 12.21 9.79 14 12 14C14.21 14 16 12.21 16 10C16 7.79 14.21 6 12 6Z" fill="currentColor"/></svg>'
   },
-  behavior: {
-    name: '行为',
-    icon: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M13 2.03V2.05L13 4.05C17.39 4.59 20.5 8.58 19.96 12.97C19.5 16.61 16.64 19.5 13 19.93V21.93C18.5 21.38 22.5 16.5 21.95 11C21.5 6.25 17.73 2.5 13 2.03M11 2.06C9.05 2.25 7.19 3 5.67 4.26L7.1 5.74C8.22 4.84 9.57 4.26 11 4.06V2.06M4.26 5.67C3 7.19 2.25 9.04 2.05 11H4.05C4.24 9.58 4.8 8.23 5.69 7.1L4.26 5.67M2.06 13C2.26 14.96 3.03 16.81 4.27 18.33L5.69 16.9C4.81 15.77 4.24 14.42 4.06 13H2.06M7.1 18.37L5.67 19.74C7.18 21 9.04 21.79 11 22V20C9.58 19.82 8.23 19.25 7.1 18.37M12.5 7V12.25L17 14.92L16.25 16.15L11 13V7H12.5Z" fill="currentColor"/></svg>'
-  },
-  tasks: {
-    name: '使用设置',
-    icon: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M19 3H14.82C14.4 1.84 13.3 1 12 1C10.7 1 9.6 1.84 9.18 3H5C3.9 3 3 3.9 3 5V19C3 20.1 3.9 21 5 21H19C20.1 21 21 20.1 21 19V5C21 3.9 20.1 3 19 3M12 3C12.55 3 13 3.45 13 4C13 4.55 12.55 5 12 5C11.45 5 11 4.55 11 4C11 3.45 11.45 3 12 3M7 7H17V9H7V7M7 11H17V13H7V11M7 15H14V17H7V15Z" fill="currentColor"/></svg>'
-  },
-  sync: {
-    name: '数据同步',
-    icon: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4C7.58 4 4.01 7.58 4.01 12C4.01 16.42 7.58 20 12 20C15.73 20 18.84 17.45 19.73 14H17.65C16.83 16.33 14.61 18 12 18C8.68 18 6 15.32 6 12C6 8.68 8.68 6 12 6C13.66 6 15.14 6.69 16.22 7.78L13 11H20V4L17.65 6.35Z" fill="currentColor"/></svg>'
-  },
   help: {
     name: '使用说明',
-    icon: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M19 2H14.82C14.4 0.84 13.3 0 12 0C10.7 0 9.6 0.84 9.18 2H5C3.9 2 3 2.9 3 4V18C3 19.1 3.9 20 5 20H9.11C9.56 21.19 10.69 22 12 22C13.31 22 14.44 21.19 14.89 20H19C20.1 20 21 19.1 21 18V4C21 2.9 20.1 2 19 2M12 2C12.55 2 13 2.45 13 3C13 3.55 12.55 4 12 4C11.45 4 11 3.55 11 3C11 2.45 11.45 2 12 2M12 20C11.45 20 11 19.55 11 19C11 18.45 11.45 18 12 18C12.55 18 13 18.45 13 19C13 19.55 12.55 20 12 20M19 18H14.82C14.4 16.84 13.3 16 12 16C10.7 16 9.6 16.84 9.18 18H5V4H9.18C9.6 5.16 10.7 6 12 6C13.3 6 14.4 5.16 14.82 4H19V18M12 9C10.9 9 10 9.9 10 11C10 12.1 10.9 13 12 13C13.1 13 14 12.1 14 11C14 9.9 13.1 9 12 9Z" fill="currentColor"/></svg>'
+    icon: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M19 2H14.82C14.4 0.84 13.3 0 12 0C10.7 0 9.6 0.84 9.18 2H5C3.9 2 3 2.9 3 4V18C3 19.1 3.9 20 5 20H9.11C9.56 21.19 10.69 22 12 22C13.31 22 14.44 21.19 14.89 20H19C20.1 20 21 19.1 21 18V4C21 2.9 20.1 2 19 2M12 2C12.55 2 13 2.45 13 3C13 3.55 12.55 4 12 4C11.45 4 11 3.55 11 3C11 2.45 11.45 2 12 2M12 20C11.45 20 11 19.55 11 19C11 18.45 11.45 18 12 18C12.55 18 13 18.55 13 19C13 19.55 12.55 20 12 20M19 18H14.82C14.4 16.84 13.3 16 12 16C10.7 16 9.6 16.84 9.18 18H5V4H9.18C9.6 5.16 10.7 6 12 6C13.3 6 14.4 5.16 14.82 4H19V18M12 9C10.9 9 10 9.9 10 11C10 12.1 10.9 13 12 13C13.1 13 14 12.1 14 11C14 9.9 13.1 9 12 9Z" fill="currentColor"/></svg>'
   },
   contact: {
     name: '联系作者',
@@ -556,30 +357,6 @@ async function applyPriorityColorPreview() {
     await invoke('emit_priority_color_changed', { color: settings.priority_color })
   } catch (error) {
     console.error('应用高优先级颜色预览失败:', error)
-  }
-}
-
-async function applyWindowLevel() {
-  try {
-    const tempSettings = {
-      opacity: settings.opacity,
-      disable_drag: settings.disable_drag,
-      auto_start: settings.auto_start,
-      theme: settings.theme,
-      priority_color: settings.priority_color,
-      window_level: settings.window_level
-    }
-    await invoke('save_app_settings', { settings: tempSettings })
-  } catch (error) {
-    console.error('应用窗口层级失败:', error)
-  }
-}
-
-async function restoreOriginalOpacity() {
-  try {
-    await invoke('apply_opacity', { opacity: originalOpacity.value })
-  } catch (error) {
-    console.error('恢复原始透明度失败:', error)
   }
 }
 
@@ -651,118 +428,6 @@ function openBlog() {
   window.open('https://www.feijimiao.cn/contact', '_blank')
 }
 
-function checkUpdate() {
-  window.open('https://www.feijimiao.cn/deskhive', '_blank')
-}
-
-// ---- Sync ----
-
-const syncTesting = ref(false)
-const syncSyncing = ref(false)
-const syncStatus = ref('')
-const syncStatusType = ref<'success' | 'error' | 'info'>('info')
-
-async function toggleSync() {
-  settings.sync_enabled = !settings.sync_enabled
-  await saveSettingsImmediately()
-}
-
-async function onSyncUrlChange() {
-  await saveSettingsImmediately()
-}
-
-async function testSyncConnection() {
-  const url = settings.sync_server_url.trim()
-  if (!url) {
-    syncStatus.value = '请输入服务器地址'
-    syncStatusType.value = 'error'
-    return
-  }
-
-  syncTesting.value = true
-  syncStatus.value = '正在测试连接...'
-  syncStatusType.value = 'info'
-
-  try {
-    const { testConnection } = await import('./sync')
-    const ok = await testConnection(url)
-    if (ok) {
-      syncStatus.value = '连接成功！服务器运行正常'
-      syncStatusType.value = 'success'
-    } else {
-      syncStatus.value = '连接失败，请检查服务器地址和端口'
-      syncStatusType.value = 'error'
-    }
-  } catch (err) {
-    syncStatus.value = '连接异常：' + (err instanceof Error ? err.message : String(err))
-    syncStatusType.value = 'error'
-  } finally {
-    syncTesting.value = false
-  }
-}
-
-async function manualSync() {
-  if (!settings.sync_server_url.trim()) {
-    syncStatus.value = '请先配置服务器地址'
-    syncStatusType.value = 'error'
-    return
-  }
-
-  syncSyncing.value = true
-  syncStatus.value = '正在同步数据...'
-  syncStatusType.value = 'info'
-
-  try {
-    const { pushAndPull, initSync } = await import('./sync')
-    initSync(true, settings.sync_server_url, () => {})
-
-    const todoData = await invoke('load_todo_data_with_groups') as { todos: any[] }
-    const groupData = await invoke('load_group_data') as { groups: any[] }
-
-    const todos = todoData.todos.map((t: any) => ({
-      id: t.id, text: t.text, completed: t.completed,
-      createdAt: t.created_at, completedAt: t.completed_at,
-      deadline: t.deadline, order: t.order, groupId: t.group_id,
-      priority: t.priority ?? 0, updatedAt: t.updated_at ?? Math.floor(Date.now() / 1000)
-    }))
-
-    const groups = groupData.groups.map((g: any) => ({
-      id: g.id, name: g.name, order: g.order,
-      collapsed: g.collapsed, updatedAt: g.updated_at ?? Math.floor(Date.now() / 1000)
-    }))
-
-    const result = await pushAndPull(todos, groups, 0)
-    if (result) {
-      // 把合并后的数据保存回服务端，主页面导航回来时自动加载最新数据
-      await invoke('save_todo_data_with_groups', {
-        todos: result.todos.map(t => ({
-          id: t.id, text: t.text, completed: t.completed,
-          created_at: t.createdAt, completed_at: t.completedAt ?? null,
-          deadline: t.deadline ?? null, order: t.order,
-          group_id: t.groupId, priority: t.priority, updated_at: t.updatedAt
-        }))
-      })
-      await invoke('save_group_data', {
-        groups: result.groups.map(g => ({
-          id: g.id, name: g.name, order: g.order,
-          collapsed: g.collapsed, updated_at: g.updatedAt
-        }))
-      })
-
-      syncStatus.value = `同步成功！共 ${result.todos.length} 个任务，${result.groups.length} 个分组`
-      syncStatusType.value = 'success'
-    } else {
-      syncStatus.value = '同步失败，请检查服务器连接'
-      syncStatusType.value = 'error'
-    }
-  } catch (err) {
-    syncStatus.value = '同步异常：' + (err instanceof Error ? err.message : String(err))
-    syncStatusType.value = 'error'
-  } finally {
-    syncSyncing.value = false
-  }
-}
-
 onMounted(async () => {
   await Promise.all([
     loadSettings(),
@@ -789,159 +454,124 @@ onMounted(async () => {
   scrollbar-width: none;
 }
 
-.sidebar-menu,
-.content-body {
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-
 .container {
-  width: 100% !important;
-  height: 100vh !important;
+  width: 100%;
+  height: 100vh;
   background: #fafafa;
-  display: flex !important;
-  flex-direction: row !important;
-  flex-wrap: nowrap !important;
-  overflow: hidden !important;
-  position: fixed !important;
-  top: 0 !important;
-  left: 0 !important;
-  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: fixed;
+  top: 0;
+  left: 0;
 }
 
-.sidebar {
-  width: 240px !important;
-  min-width: 240px !important;
-  max-width: 240px !important;
-  height: 100vh !important;
-  background: linear-gradient(180deg, #ffffff 0%, #f8f9fa 100%);
-  border-right: 1px solid #e8eaed;
-  display: flex !important;
-  flex-direction: column !important;
-  flex-shrink: 0 !important;
-  flex-basis: 240px !important;
-  overflow: hidden !important;
-  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.02);
-}
-
-.sidebar-header {
-  padding: 16px 16px 16px;
-  border-bottom: 1px solid #e8eaed;
-  user-select: none;
+/* ===== Top Tab Bar ===== */
+.tab-bar {
   flex-shrink: 0;
-  background: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(10px);
-  height: 60px;
-  box-sizing: border-box;
+  background: #ffffff;
+  border-bottom: 1px solid #e8eaed;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+  z-index: 10;
+  position: sticky;
+  top: 0;
+}
+
+.tab-bar-scroll {
   display: flex;
-  align-items: center;
-}
-
-.sidebar-header h1 {
-  font-size: 20px;
-  font-weight: 700;
-  color: #1a1a1a;
-  margin: 0;
-  letter-spacing: -0.3px;
-  line-height: 1;
-}
-
-.sidebar-menu {
-  flex: 1;
-  padding: 8px 0;
-  overflow-y: auto;
-  overflow-x: hidden;
-  -ms-overflow-style: none;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
+  -ms-overflow-style: none;
+  gap: 2px;
+  padding: 0 8px;
 }
 
-.sidebar-menu::-webkit-scrollbar {
+.tab-bar-scroll::-webkit-scrollbar {
   display: none;
-  width: 0;
-  height: 0;
 }
 
-.menu-item {
+.tab-item {
   display: flex;
   align-items: center;
-  padding: 10px 16px;
-  margin: 3px 10px;
-  cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  gap: 5px;
+  padding: 12px 14px;
   border: none;
   background: transparent;
-  width: calc(100% - 20px);
-  text-align: left;
-  font-size: 14px;
-  color: #5f6368;
-  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
   font-weight: 500;
+  color: #5f6368;
+  white-space: nowrap;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  flex-shrink: 0;
+  min-height: 44px;
+  border-radius: 0;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.menu-item:hover {
-  background: rgba(0, 122, 255, 0.08);
-  color: #007aff;
-  transform: translateX(2px);
-}
-
-.menu-item.active {
+.tab-item::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%) scaleX(0);
+  width: 70%;
+  height: 2.5px;
   background: #007aff;
-  color: #ffffff;
-  box-shadow: 0 2px 8px rgba(0, 122, 255, 0.25);
-  transform: translateX(0);
+  border-radius: 2px 2px 0 0;
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.menu-item-icon {
+.tab-item.active {
+  color: #007aff;
+  background: rgba(0, 122, 255, 0.06);
+}
+
+.tab-item.active::after {
+  transform: translateX(-50%) scaleX(1);
+}
+
+.tab-item:active {
+  background: rgba(0, 122, 255, 0.08);
+}
+
+.tab-icon {
   width: 18px;
   height: 18px;
-  margin-right: 10px;
-  font-size: 15px;
-}
-
-.content {
-  flex: 1 !important;
-  display: flex !important;
-  flex-direction: column !important;
-  min-width: 0 !important;
-  height: 100vh !important;
-  overflow: hidden !important;
-}
-
-.content-header {
-  padding: 16px 24px 16px;
-  border-bottom: 1px solid #e8eaed;
-  user-select: none;
-  flex-shrink: 0;
-  background: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(10px);
-  height: 60px;
-  box-sizing: border-box;
   display: flex;
   align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
-.content-header h2 {
-  font-size: 22px;
-  font-weight: 700;
-  color: #202124;
-  margin: 0;
-  letter-spacing: -0.3px;
+.tab-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.tab-label {
+  font-size: 13px;
   line-height: 1;
+}
+
+/* ===== Content ===== */
+.content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .content-body {
   flex: 1;
-  padding: 20px 24px;
+  padding: 16px;
   overflow-y: auto;
   background: #fafafa;
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-
-.content-body::-webkit-scrollbar {
-  display: none;
-  width: 0;
-  height: 0;
+  -webkit-overflow-scrolling: touch;
 }
 
 .setting-section {
@@ -959,6 +589,7 @@ onMounted(async () => {
   text-transform: uppercase;
   letter-spacing: 0.8px;
   margin-bottom: 8px;
+  padding: 0 2px;
 }
 
 .setting-group {
@@ -982,6 +613,7 @@ onMounted(async () => {
   border-bottom: 1px solid #f0f1f3;
   min-height: 50px;
   transition: background-color 0.2s ease;
+  gap: 12px;
 }
 
 .setting-item:hover {
@@ -990,6 +622,11 @@ onMounted(async () => {
 
 .setting-item:last-child {
   border-bottom: none;
+}
+
+.setting-label-wrap {
+  flex: 1;
+  min-width: 0;
 }
 
 .setting-label {
@@ -1009,8 +646,10 @@ onMounted(async () => {
 .setting-control {
   display: flex;
   align-items: center;
+  flex-shrink: 0;
 }
 
+/* ===== Toggle Switch ===== */
 .toggle-switch {
   position: relative;
   width: 51px;
@@ -1043,8 +682,9 @@ onMounted(async () => {
   transform: translateX(20px);
 }
 
+/* ===== Range Input ===== */
 .setting-control input[type="range"] {
-  width: 120px;
+  width: 100px;
   margin-right: 8px;
 }
 
@@ -1058,6 +698,7 @@ onMounted(async () => {
   min-width: 120px;
 }
 
+/* ===== Theme Toggle ===== */
 .theme-toggle-switch {
   position: relative;
   width: 60px;
@@ -1067,6 +708,7 @@ onMounted(async () => {
   cursor: pointer;
   transition: background-color 0.3s;
   overflow: hidden;
+  flex-shrink: 0;
 }
 
 .theme-toggle-switch.theme-dark {
@@ -1122,152 +764,83 @@ onMounted(async () => {
   color: #60a5fa;
 }
 
+/* ===== Range Value ===== */
 .range-value {
-  font-size: 17px;
+  font-size: 14px;
   color: #007aff;
   font-weight: 500;
-  min-width: 40px;
+  min-width: 36px;
   text-align: right;
 }
 
+/* ===== Color Picker ===== */
 .color-picker-wrapper {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .color-picker {
-  width: 50px;
-  height: 32px;
+  width: 44px;
+  height: 30px;
   border: 2px solid #e5e5e5;
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s ease;
+  padding: 0;
 }
 
 .color-picker:hover {
   border-color: #007aff;
-  transform: scale(1.05);
 }
 
 .color-value {
-  font-size: 14px;
+  font-size: 13px;
   color: #5f6368;
   font-weight: 500;
   font-family: 'Courier New', monospace;
 }
 
-.radio-group {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-}
-
-.radio-option {
-  display: flex;
-  align-items: center;
-  cursor: pointer;
-  user-select: none;
-}
-
-.radio-option input[type="radio"] {
-  width: 18px;
-  height: 18px;
-  margin: 0;
-  cursor: pointer;
-  accent-color: #007aff;
-}
-
-.radio-label {
-  margin-left: 6px;
-  font-size: 14px;
-  color: #202124;
-  font-weight: 500;
-}
-
-.number-input {
-  width: 80px;
-  padding: 6px 10px;
-  border: 1px solid #e5e5e5;
-  border-radius: 8px;
-  background: #ffffff;
-  color: #202124;
-  font-size: 14px;
-  font-weight: 500;
-  text-align: center;
-  transition: all 0.2s ease;
-}
-
-.number-input:focus {
-  outline: none;
-  border-color: #007aff;
-  box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.1);
-}
-
-.input-unit {
-  margin-left: 8px;
-  font-size: 14px;
-  color: #5f6368;
-  font-weight: 500;
-}
-
-.test-btn {
-  padding: 6px 16px;
-  background: #007aff;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.test-btn:hover {
-  background: #0051d5;
-  transform: translateY(-1px);
-}
-
-.test-btn:active {
-  transform: translateY(0);
-}
-
-.content-footer {
-  padding: 14px 24px;
+/* ===== Bottom Bar ===== */
+.bottom-bar {
+  padding: 12px 16px;
+  padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
   border-top: 1px solid #e8eaed;
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(10px);
   display: flex;
-  gap: 10px;
-  justify-content: flex-end;
+  justify-content: center;
   flex-shrink: 0;
 }
 
+/* ===== Buttons ===== */
 .btn {
-  padding: 9px 22px;
+  padding: 10px 32px;
   border: none;
   border-radius: 10px;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   letter-spacing: 0.2px;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .btn-primary {
   background: #007aff;
   color: white;
   box-shadow: 0 2px 8px rgba(0, 122, 255, 0.25);
+  width: 100%;
+  max-width: 300px;
 }
 
 .btn-primary:hover {
   background: #0051d5;
-  transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(0, 122, 255, 0.3);
 }
 
 .btn-primary:active {
-  transform: translateY(0);
+  transform: scale(0.98);
 }
 
 .btn-secondary {
@@ -1278,92 +851,203 @@ onMounted(async () => {
 
 .btn-secondary:hover {
   background: rgba(0, 122, 255, 0.08);
-  transform: translateY(-1px);
 }
 
-body.dark-theme {
-  background: #0a0a0a;
-  color: #e0e0e0;
+.btn-secondary:active {
+  transform: scale(0.98);
 }
 
+/* ===== Help Content ===== */
+.help-content {
+  padding: 12px 14px;
+  line-height: 1.5;
+}
+
+.help-content h3 {
+  margin: 12px 0 6px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #000;
+}
+
+.help-content p {
+  margin: 3px 0;
+  font-size: 13px;
+  color: #333;
+}
+
+/* ===== Update Content ===== */
+.update-content {
+  padding: 12px 14px;
+  line-height: 1.5;
+}
+
+.update-content h3 {
+  margin: 0 0 12px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #007aff;
+}
+
+.update-content h4 {
+  margin: 10px 0 6px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #000;
+}
+
+.update-content p {
+  margin: 3px 0;
+  font-size: 13px;
+  color: #333;
+  padding-left: 6px;
+}
+
+/* ===== Contact ===== */
+.contact-item {
+  display: block;
+  padding: 0;
+}
+
+.contact-content {
+  padding: 20px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+}
+
+.contact-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+.logo-row {
+  gap: 16px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.contact-logo {
+  width: 72px;
+  height: 72px;
+  border-radius: 36px;
+  object-fit: cover;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.blog-btn {
+  padding: 9px 20px;
+  background: #007aff;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 122, 255, 0.3);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.blog-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.blog-btn:hover {
+  background: #0056cc;
+  box-shadow: 0 4px 12px rgba(0, 122, 255, 0.4);
+}
+
+.blog-btn:active {
+  transform: scale(0.97);
+}
+
+.qrcode-row {
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.qrcode-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.qrcode-item h3 {
+  margin: 0 0 10px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #000;
+}
+
+.contact-qrcode {
+  width: 130px;
+  height: 130px;
+  border-radius: 10px;
+  object-fit: cover;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e5e5e5;
+}
+
+.qrcode-tip {
+  margin: 6px 0 0 0;
+  font-size: 12px;
+  color: #6d6d70;
+}
+
+.text-row {
+  justify-content: center;
+}
+
+.contact-text {
+  font-size: 14px;
+  font-weight: 500;
+  color: #007aff;
+  margin: 0;
+  padding: 8px 18px;
+  background: rgba(0, 122, 255, 0.1);
+  border-radius: 8px;
+  border: 1px solid rgba(0, 122, 255, 0.2);
+}
+
+/* ===== Dark Theme ===== */
 body.dark-theme .container {
   background: #0a0a0a;
-  border-radius: 12px;
 }
 
-body.dark-theme .sidebar {
-  background: linear-gradient(180deg, #0f0f0f 0%, #0a0a0a 100%);
-  border-right: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 2px 0 12px rgba(0, 0, 0, 0.5);
-}
-
-body.dark-theme .sidebar-header {
+body.dark-theme .tab-bar {
+  background: #0f0f0f;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(15, 15, 15, 0.9);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
 }
 
-body.dark-theme .sidebar-header h1 {
-  color: #e0e0e0;
-}
-
-body.dark-theme .sidebar-menu {
-  padding: 8px 0;
-  overflow-y: auto;
-  overflow-x: hidden;
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-
-body.dark-theme .menu-item {
+body.dark-theme .tab-item {
   color: #808080;
 }
 
-body.dark-theme .menu-item:hover {
-  background: rgba(0, 122, 255, 0.15);
+body.dark-theme .tab-item.active {
   color: #0a84ff;
+  background: rgba(10, 132, 255, 0.12);
 }
 
-body.dark-theme .menu-item.active {
+body.dark-theme .tab-item::after {
   background: #0a84ff;
-  color: #ffffff;
-  box-shadow: 0 2px 8px rgba(10, 132, 255, 0.4);
 }
 
-body.dark-theme .menu-item-icon {
-  width: 20px;
-  height: 20px;
-  margin-right: 12px;
-  font-size: 16px;
-}
-
-body.dark-theme .content {
-  flex: 1 !important;
-  display: flex !important;
-  flex-direction: column !important;
-  min-width: 0 !important;
-  height: 100vh !important;
-  overflow: hidden !important;
-}
-
-body.dark-theme .content-header {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(15, 15, 15, 0.9);
-}
-
-body.dark-theme .content-header h2 {
-  color: #e0e0e0;
+body.dark-theme .tab-item:active {
+  background: rgba(10, 132, 255, 0.08);
 }
 
 body.dark-theme .content-body {
   background: #0a0a0a;
-}
-
-body.dark-theme .setting-section {
-  margin-bottom: 32px;
-}
-
-body.dark-theme .setting-section:last-child {
-  margin-bottom: 0;
 }
 
 body.dark-theme .section-title {
@@ -1396,11 +1080,6 @@ body.dark-theme .setting-description {
   color: #808080;
 }
 
-body.dark-theme .setting-control {
-  display: flex;
-  align-items: center;
-}
-
 body.dark-theme .toggle-switch {
   background: #202020;
 }
@@ -1408,11 +1087,6 @@ body.dark-theme .toggle-switch {
 body.dark-theme .toggle-switch.active {
   background: #30d158;
   box-shadow: 0 2px 6px rgba(48, 209, 88, 0.5);
-}
-
-body.dark-theme .setting-control input[type="range"] {
-  width: 120px;
-  margin-right: 8px;
 }
 
 body.dark-theme .setting-control select {
@@ -1426,14 +1100,7 @@ body.dark-theme .setting-control select {
 }
 
 body.dark-theme .theme-toggle-switch {
-  position: relative;
-  width: 60px;
-  height: 30px;
   background: #1a1a1a;
-  border-radius: 15px;
-  cursor: pointer;
-  transition: background-color 0.3s;
-  overflow: hidden;
 }
 
 body.dark-theme .theme-toggle-switch.theme-dark {
@@ -1441,19 +1108,7 @@ body.dark-theme .theme-toggle-switch.theme-dark {
 }
 
 body.dark-theme .theme-toggle-slider {
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 26px;
-  height: 26px;
   background: #e7e9ed;
-  border-radius: 50%;
-  transition: transform 0.3s;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-}
-
-body.dark-theme .theme-toggle-switch.theme-dark .theme-toggle-slider {
-  transform: translateX(30px);
 }
 
 body.dark-theme .light-label {
@@ -1468,16 +1123,8 @@ body.dark-theme .theme-toggle-switch.theme-dark .light-label {
   color: rgba(251, 191, 36, 0.4);
 }
 
-body.dark-theme .theme-toggle-switch.theme-dark .dark-label {
-  color: #60a5fa;
-}
-
 body.dark-theme .range-value {
-  font-size: 17px;
-  color: #007aff;
-  font-weight: 500;
-  min-width: 40px;
-  text-align: right;
+  color: #0a84ff;
 }
 
 body.dark-theme .color-picker {
@@ -1492,38 +1139,7 @@ body.dark-theme .color-value {
   color: #808080;
 }
 
-body.dark-theme .radio-option input[type="radio"] {
-  accent-color: #0a84ff;
-}
-
-body.dark-theme .radio-label {
-  color: #e0e0e0;
-}
-
-body.dark-theme .number-input {
-  border-color: rgba(255, 255, 255, 0.1);
-  background: #1a1a1a;
-  color: #e0e0e0;
-}
-
-body.dark-theme .number-input:focus {
-  border-color: #0a84ff;
-  box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.2);
-}
-
-body.dark-theme .input-unit {
-  color: #808080;
-}
-
-body.dark-theme .test-btn {
-  background: #0a84ff;
-}
-
-body.dark-theme .test-btn:hover {
-  background: #0077ed;
-}
-
-body.dark-theme .content-footer {
+body.dark-theme .bottom-bar {
   border-top: 1px solid rgba(255, 255, 255, 0.08);
   background: rgba(15, 15, 15, 0.98);
 }
@@ -1548,218 +1164,38 @@ body.dark-theme .btn-secondary:hover {
   background: rgba(10, 132, 255, 0.15);
 }
 
-.help-content {
-  padding: 12px 14px;
-  line-height: 1.5;
-}
-
-.help-content h3 {
-  margin: 12px 0 6px 0;
-  font-size: 14px;
-  font-weight: 600;
-  color: #000;
-}
-
 body.dark-theme .help-content h3 {
   color: #e7e9ed;
-}
-
-.help-content p {
-  margin: 3px 0;
-  font-size: 13px;
-  color: #333;
 }
 
 body.dark-theme .help-content p {
   color: #a0a6aa;
 }
 
-.update-content {
-  padding: 12px 14px;
-  line-height: 1.5;
-}
-
-.update-content h3 {
-  margin: 0 0 12px 0;
-  font-size: 16px;
-  font-weight: 600;
-  color: #007aff;
-}
-
 body.dark-theme .update-content h3 {
-  color: #007aff;
-}
-
-.update-content h4 {
-  margin: 10px 0 6px 0;
-  font-size: 14px;
-  font-weight: 600;
-  color: #000;
+  color: #0a84ff;
 }
 
 body.dark-theme .update-content h4 {
   color: #e7e9ed;
 }
 
-.update-content p {
-  margin: 3px 0;
-  font-size: 13px;
-  color: #333;
-  padding-left: 6px;
-}
-
 body.dark-theme .update-content p {
   color: #a0a6aa;
-}
-
-.contact-item {
-  display: block;
-  padding: 0;
-}
-
-.contact-content {
-  padding: 20px 16px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 24px;
-}
-
-.contact-row {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-}
-
-.logo-row {
-  gap: 16px;
-}
-
-.contact-logo {
-  width: 80px;
-  height: 80px;
-  border-radius: 40px;
-  object-fit: cover;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 body.dark-theme .contact-logo {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
-.blog-btn {
-  padding: 9px 20px;
-  background: #007aff;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 2px 8px rgba(0, 122, 255, 0.3);
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.blog-btn svg {
-  width: 18px;
-  height: 18px;
-}
-
-.blog-btn:hover {
-  background: #0056cc;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 122, 255, 0.4);
-}
-
-.blog-btn:active {
-  transform: translateY(0);
-}
-
 body.dark-theme .blog-btn {
-  background: #007aff;
-  box-shadow: 0 2px 8px rgba(0, 122, 255, 0.4);
+  background: #0a84ff;
+  box-shadow: 0 2px 8px rgba(10, 132, 255, 0.4);
 }
 
 body.dark-theme .blog-btn:hover {
   background: #0056cc;
-  box-shadow: 0 4px 12px rgba(0, 122, 255, 0.5);
-}
-
-.check-update-btn {
-  padding: 6px 16px;
-  background: #34c759;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 2px 6px rgba(52, 199, 89, 0.3);
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.check-update-btn svg {
-  width: 16px;
-  height: 16px;
-}
-
-.check-update-btn:hover {
-  background: #28a745;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 10px rgba(52, 199, 89, 0.4);
-}
-
-.check-update-btn:active {
-  transform: translateY(0);
-}
-
-body.dark-theme .check-update-btn {
-  background: #34c759;
-  box-shadow: 0 2px 6px rgba(52, 199, 89, 0.4);
-}
-
-body.dark-theme .check-update-btn:hover {
-  background: #28a745;
-  box-shadow: 0 4px 10px rgba(52, 199, 89, 0.5);
-}
-
-.qrcode-row {
-  gap: 32px;
-  flex-wrap: wrap;
-}
-
-.qrcode-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-}
-
-.qrcode-item h3 {
-  margin: 0 0 12px 0;
-  font-size: 14px;
-  font-weight: 600;
-  color: #000;
-}
-
-body.dark-theme .qrcode-item h3 {
-  color: #e7e9ed;
-}
-
-.contact-qrcode {
-  width: 150px;
-  height: 150px;
-  border-radius: 10px;
-  object-fit: cover;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-  border: 1px solid #e5e5e5;
+  box-shadow: 0 4px 12px rgba(10, 132, 255, 0.5);
 }
 
 body.dark-theme .contact-qrcode {
@@ -1767,29 +1203,8 @@ body.dark-theme .contact-qrcode {
   border: 1px solid #444b4f;
 }
 
-.qrcode-tip {
-  margin: 8px 0 0 0;
-  font-size: 12px;
-  color: #6d6d70;
-}
-
 body.dark-theme .qrcode-tip {
   color: #a0a6aa;
-}
-
-.text-row {
-  justify-content: center;
-}
-
-.contact-text {
-  font-size: 14px;
-  font-weight: 500;
-  color: #007aff;
-  margin: 0;
-  padding: 8px 18px;
-  background: rgba(0, 122, 255, 0.1);
-  border-radius: 8px;
-  border: 1px solid rgba(0, 122, 255, 0.2);
 }
 
 body.dark-theme .contact-text {
@@ -1798,78 +1213,8 @@ body.dark-theme .contact-text {
   border: 1px solid rgba(10, 132, 255, 0.3);
 }
 
-.text-input {
-  width: 100%;
-  padding: 8px 12px;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  font-size: 13px;
-  background: #fff;
-  color: #333;
-  outline: none;
-  transition: border-color 0.2s;
-}
-
-.text-input:focus {
-  border-color: #007aff;
-  box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.15);
-}
-
-body.dark-theme .text-input {
-  background: #252627;
-  border-color: #444b4f;
+body.dark-theme .qrcode-item h3 {
   color: #e7e9ed;
-}
-
-body.dark-theme .text-input:focus {
-  border-color: #0a84ff;
-}
-
-.sync-url-input {
-  min-width: 240px;
-}
-
-.sync-status {
-  padding: 8px 12px;
-  border-radius: 6px;
-  font-size: 13px;
-  width: 100%;
-}
-
-.sync-status.success {
-  background: rgba(52, 199, 89, 0.1);
-  color: #34c759;
-  border: 1px solid rgba(52, 199, 89, 0.3);
-}
-
-.sync-status.error {
-  background: rgba(255, 59, 48, 0.1);
-  color: #ff3b30;
-  border: 1px solid rgba(255, 59, 48, 0.3);
-}
-
-.sync-status.info {
-  background: rgba(0, 122, 255, 0.1);
-  color: #007aff;
-  border: 1px solid rgba(0, 122, 255, 0.3);
-}
-
-body.dark-theme .sync-status.success {
-  background: rgba(48, 209, 88, 0.15);
-  color: #30d158;
-  border-color: rgba(48, 209, 88, 0.3);
-}
-
-body.dark-theme .sync-status.error {
-  background: rgba(255, 69, 58, 0.15);
-  color: #ff453a;
-  border-color: rgba(255, 69, 58, 0.3);
-}
-
-body.dark-theme .sync-status.info {
-  background: rgba(10, 132, 255, 0.15);
-  color: #0a84ff;
-  border-color: rgba(10, 132, 255, 0.3);
 }
 
 .btn:disabled {
