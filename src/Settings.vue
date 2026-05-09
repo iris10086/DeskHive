@@ -642,7 +642,7 @@ const settings = reactive<AppSettings>({
   notification_minutes_before: 30,
   window_size: 'medium',
   sync_enabled: false,
-  sync_server_url: ''
+  sync_server_url: '',
   click_through: false
 })
 
@@ -778,7 +778,7 @@ async function saveSettingsImmediately() {
         : settings.notification_minutes_before,
       window_size: settings.window_size,
       sync_enabled: Boolean(settings.sync_enabled),
-      sync_server_url: settings.sync_server_url || ''
+      sync_server_url: settings.sync_server_url || '',
       click_through: Boolean(settings.click_through)
     }
     
