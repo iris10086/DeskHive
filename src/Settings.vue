@@ -965,7 +965,8 @@ async function manualSync() {
 
     const groups = groupData.groups.map((g: any) => ({
       id: g.id, name: g.name, order: g.order,
-      collapsed: g.collapsed, updatedAt: g.updated_at ?? Math.floor(Date.now() / 1000)
+      collapsed: g.collapsed, updatedAt: g.updated_at ?? Math.floor(Date.now() / 1000),
+      isDeleted: g.is_deleted ?? false
     }))
 
     const result = await pushAndPull(todos, groups, 0)
@@ -983,7 +984,8 @@ async function manualSync() {
       await invoke('save_group_data', {
         groups: result.groups.map(g => ({
           id: g.id, name: g.name, order: g.order,
-          collapsed: g.collapsed, updated_at: g.updatedAt
+          collapsed: g.collapsed, updated_at: g.updatedAt,
+          is_deleted: g.isDeleted ?? false
         }))
       })
       // 通知主窗口刷新数据

@@ -121,6 +121,7 @@ export async function invoke(cmd: string, args?: Record<string, any>): Promise<a
         order: g.order,
         collapsed: g.collapsed,
         updated_at: g.updated_at,
+        is_deleted: g.is_deleted ?? false,
       }))
       return apiPut('/api/groups', groups)
     }
@@ -134,8 +135,13 @@ export async function invoke(cmd: string, args?: Record<string, any>): Promise<a
     case 'update_single_group': {
       const group = args?.group
       if (!group) return Promise.reject(new Error('缺少 group 参数'))
-      // saveSingleGroup 已转为 snake_case，直接透传
-      return apiPatch(`/api/groups/${group.id}`, group)
+      // 尝试 PATCH，如果分组不存在（404）则回退到 PUT 创建
+      return apiPatch(`/api/groups/${group.id}`, group).catch((err) => {
+        if (String(err).includes('404')) {
+          return apiPut('/api/groups', [group])
+        }
+        throw err
+      })
     }
 
     // ---- Settings (localStorage) ----

@@ -368,6 +368,7 @@ pub async fn load_group_data(app: tauri::AppHandle) -> Result<crate::models::Gro
                 order: 0,
                 collapsed: false,
                 updated_at: 0,
+                is_deleted: false,
             }],
         });
     }

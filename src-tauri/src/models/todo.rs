@@ -53,6 +53,8 @@ pub struct TodoGroup {
     pub collapsed: bool,
     #[serde(default = "current_timestamp")] // 同步用，兼容旧数据
     pub updated_at: i64, // 最后更新时间，Unix时间戳（秒）
+    #[serde(default)] // 逻辑删除标记，兼容旧数据
+    pub is_deleted: bool,
 }
 
 #[derive(Serialize, Deserialize)]

@@ -48,6 +48,7 @@ interface SyncGroup {
   order: number;
   collapsed: boolean;
   updated_at: number;
+  is_deleted: boolean;
 }
 
 // ---- Helpers ----
@@ -91,6 +92,7 @@ function groupToSync(group: TodoGroup): SyncGroup {
     order: group.order,
     collapsed: group.collapsed,
     updated_at: group.updatedAt,
+    is_deleted: group.isDeleted ?? false,
   };
 }
 
@@ -101,6 +103,7 @@ function syncToGroup(g: SyncGroup): TodoGroup {
     order: g.order,
     collapsed: g.collapsed,
     updatedAt: g.updated_at,
+    isDeleted: g.is_deleted,
   };
 }
 

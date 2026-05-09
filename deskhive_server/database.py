@@ -147,6 +147,7 @@ def get_all_groups() -> list[dict]:
     groups = data.get("groups", [])
     for g in groups:
         g["collapsed"] = _to_bool(g.get("collapsed", False))
+        g["is_deleted"] = _to_bool(g.get("is_deleted", False))
     return groups
 
 
@@ -171,14 +172,21 @@ def replace_all_groups(groups: list[dict]) -> None:
 def merge_groups(client_groups: list[dict]) -> None:
     """
     合并客户端 groups — last-write-wins by updated_at。
+
+    服务端副本更新则保留服务端，否则用客户端覆盖。仅存在于一方的条目保留。
     """
     groups = get_all_groups()
     existing = {g["id"]: g for g in groups}
 
     for group in client_groups:
         gid = group["id"]
-        if gid in existing and existing[gid]["updated_at"] > group["updated_at"]:
-            continue
+        if gid in existing:
+            existing_group = existing[gid]
+            # 服务端已逻辑删除 → 不接受客户端非删除覆盖（防止时间戳膨胀导致误覆盖）
+            if existing_group.get("is_deleted") and not group.get("is_deleted"):
+                continue
+            if existing_group["updated_at"] > group["updated_at"]:
+                continue  # 服务端更新 — 跳过
         existing[gid] = group
 
     _save_all_groups(list(existing.values()))

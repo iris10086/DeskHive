@@ -276,7 +276,7 @@ const windowSizeClass = computed(() => {
 });
 
 const sortedGroups = computed(() => {
-  return [...groups.value].sort((a, b) => a.order - b.order);
+  return [...groups.value].filter(g => !g.isDeleted).sort((a, b) => a.order - b.order);
 });
 
 const sortedGroupsWithoutDefault = computed(() => {
@@ -598,25 +598,27 @@ function deleteGroup() {
     hideGroupMenu();
     return;
   }
-  
+
   const groupId = contextMenuGroup.value.id;
-  
+
   // 将分组中的任务移动到默认分组
   todos.value.forEach(todo => {
     if (todo.groupId === groupId) {
       todo.groupId = 'default';
+      todo.updatedAt = Math.floor(Date.now() / 1000);
     }
   });
-  
-  // 删除分组
+
+  // 逻辑删除分组
   const groupIndex = groups.value.findIndex(g => g.id === groupId);
   if (groupIndex !== -1) {
-    groups.value.splice(groupIndex, 1);
+    groups.value[groupIndex].isDeleted = true;
+    groups.value[groupIndex].updatedAt = Math.floor(Date.now() / 1000);
     saveGroupData();
     saveTodoData();
     showToastMessage('分组已删除', 'success');
   }
-  
+
   hideGroupMenu();
 }
 
@@ -882,11 +884,13 @@ function handleDropOnGroupHeader(targetGroupId: string) {
     : -1;
   
   // 更新任务的分组和顺序（放到末尾）
+  const now = Math.floor(Date.now() / 1000);
   todos.value[todoIndex].groupId = targetGroupId;
   todos.value[todoIndex].order = maxOrder + 1;
-  
+  todos.value[todoIndex].updatedAt = now;
+
   console.log(`任务 "${draggedTodo.value.text}" 从分组 "${dragSourceGroupId.value}" 移动到分组 "${targetGroupId}" 的末尾`);
-  
+
   // 重新计算源分组的 order
   const sourceGroupTodos = getGroupTodos(dragSourceGroupId.value, false);
   sourceGroupTodos.forEach((t, index) => {
@@ -895,10 +899,10 @@ function handleDropOnGroupHeader(targetGroupId: string) {
       todos.value[idx].order = index;
     }
   });
-  
+
   // 保存到后端
   saveTodoData();
-  
+
   // 清除拖动状态
   draggedTodo.value = null;
   dragSourceGroupId.value = null;
@@ -916,7 +920,7 @@ function handleTodoReorder(groupId: string, newOrder: Todo[]) {
       todos.value[todoIndex].groupId = groupId;
     }
   });
-  
+
   // 保存到后端
   saveTodoData();
 }
@@ -932,10 +936,12 @@ function handleTodoChange(groupId: string, event: any) {
     const todoIndex = todos.value.findIndex(t => t.id === todo.id);
     
     if (todoIndex !== -1) {
+      const now = Math.floor(Date.now() / 1000);
       // 更新任务的分组ID
       todos.value[todoIndex].groupId = groupId;
+      todos.value[todoIndex].updatedAt = now;
       console.log(`任务 "${todo.text}" 从分组 "${dragSourceGroupId.value}" 移动到分组 "${groupId}"`);
-      
+
       // 重新计算目标分组所有任务的 order
       const targetGroupTodos = getGroupTodos(groupId, false);
       targetGroupTodos.forEach((t, index) => {
@@ -944,7 +950,7 @@ function handleTodoChange(groupId: string, event: any) {
           todos.value[idx].order = index;
         }
       });
-      
+
       // 如果有源分组，重新计算源分组的 order
       if (dragSourceGroupId.value && dragSourceGroupId.value !== groupId) {
         const sourceGroupTodos = getGroupTodos(dragSourceGroupId.value, false);
@@ -955,7 +961,7 @@ function handleTodoChange(groupId: string, event: any) {
           }
         });
       }
-      
+
       // 保存到后端
       saveTodoData();
     }
@@ -1095,7 +1101,8 @@ async function saveGroupData() {
       name: group.name,
       order: group.order,
       collapsed: group.collapsed,
-      updated_at: group.updatedAt
+      updated_at: group.updatedAt,
+      is_deleted: group.isDeleted || false
     }));
     
     // 异步保存，不等待结果
@@ -1143,12 +1150,13 @@ async function loadTodoData() {
 async function loadGroupData() {
   try {
     const data = await invoke('load_group_data') as {
-      groups: { id: string; name: string; order: number; collapsed: boolean; updated_at?: number }[]
+      groups: { id: string; name: string; order: number; collapsed: boolean; updated_at?: number; is_deleted?: boolean }[]
     };
 
     groups.value = data.groups.map(g => ({
       ...g,
-      updatedAt: g.updated_at ?? Math.floor(Date.now() / 1000)
+      updatedAt: g.updated_at ?? Math.floor(Date.now() / 1000),
+      isDeleted: g.is_deleted ?? false
     }));
     console.log('分组数据加载成功');
   } catch (error) {
@@ -1346,17 +1354,24 @@ async function onSyncTimerTick() {
         todos.value.push(serverTodo);
       }
     }
-    const mergedGroupIds = new Set<string>();
     for (const serverGroup of result.groups) {
+      // 跳过已逻辑删除的 group（由客户端过滤）
+      if (serverGroup.isDeleted) {
+        continue;
+      }
       const localIndex = groups.value.findIndex(g => g.id === serverGroup.id);
       if (localIndex !== -1) {
-        if (serverGroup.updatedAt > groups.value[localIndex].updatedAt) {
+        const localGroup = groups.value[localIndex];
+        // 本地已逻辑删除 — 不接受服务端非删除的覆盖（防止复活）
+        if (localGroup.isDeleted && !serverGroup.isDeleted) {
+          continue;
+        }
+        if (serverGroup.updatedAt > localGroup.updatedAt) {
           groups.value[localIndex] = serverGroup;
         }
       } else {
         groups.value.push(serverGroup);
       }
-      mergedGroupIds.add(serverGroup.id);
     }
     console.log('同步完成:', result.todos.length, 'tasks,', result.groups.length, 'groups');
   }

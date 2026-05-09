@@ -252,7 +252,7 @@ const draggedTodo = ref<Todo | null>(null);
 const dragSourceGroupId = ref<string | null>(null);
 
 const sortedGroups = computed(() => {
-  return [...groups.value].sort((a, b) => a.order - b.order);
+  return [...groups.value].filter(g => !g.isDeleted).sort((a, b) => a.order - b.order);
 });
 
 const sortedGroupsWithoutDefault = computed(() => {
@@ -548,12 +548,14 @@ function deleteGroup() {
   todos.value.forEach(todo => {
     if (todo.groupId === groupId) {
       todo.groupId = 'default';
+      todo.updatedAt = Math.floor(Date.now() / 1000);
     }
   });
 
   const groupIndex = groups.value.findIndex(g => g.id === groupId);
   if (groupIndex !== -1) {
-    groups.value.splice(groupIndex, 1);
+    groups.value[groupIndex].isDeleted = true;
+    groups.value[groupIndex].updatedAt = Math.floor(Date.now() / 1000);
     saveGroupData();
     saveTodoData();
     showToastMessage('分组已删除', 'success');
@@ -765,8 +767,10 @@ function handleDropOnGroupHeader(targetGroupId: string) {
     ? Math.max(...targetGroupTodos.map(t => t.order))
     : -1;
 
+  const now = Math.floor(Date.now() / 1000);
   todos.value[todoIndex].groupId = targetGroupId;
   todos.value[todoIndex].order = maxOrder + 1;
+  todos.value[todoIndex].updatedAt = now;
 
   const sourceGroupTodos = getGroupTodos(dragSourceGroupId.value, false);
   sourceGroupTodos.forEach((t, index) => {
@@ -799,7 +803,9 @@ function handleTodoChange(groupId: string, event: any) {
     const todoIndex = todos.value.findIndex(t => t.id === todo.id);
 
     if (todoIndex !== -1) {
+      const now = Math.floor(Date.now() / 1000);
       todos.value[todoIndex].groupId = groupId;
+      todos.value[todoIndex].updatedAt = now;
 
       const targetGroupTodos = getGroupTodos(groupId, false);
       targetGroupTodos.forEach((t, index) => {
@@ -942,7 +948,8 @@ async function saveGroupData() {
       name: group.name,
       order: group.order,
       collapsed: group.collapsed,
-      updated_at: group.updatedAt
+      updated_at: group.updatedAt,
+      is_deleted: group.isDeleted || false
     }));
 
     invoke('save_group_data', {
@@ -987,12 +994,13 @@ async function loadTodoData() {
 async function loadGroupData() {
   try {
     const data = await invoke('load_group_data') as {
-      groups: { id: string; name: string; order: number; collapsed: boolean; updated_at?: number }[]
+      groups: { id: string; name: string; order: number; collapsed: boolean; updated_at?: number; is_deleted?: boolean }[]
     };
 
     groups.value = data.groups.map(g => ({
       ...g,
-      updatedAt: g.updated_at ?? Math.floor(Date.now() / 1000)
+      updatedAt: g.updated_at ?? Math.floor(Date.now() / 1000),
+      isDeleted: g.is_deleted ?? false
     }));
     console.log('分组数据加载成功');
   } catch (error) {
@@ -1157,9 +1165,18 @@ async function onSyncTimerTick() {
       }
     }
     for (const serverGroup of result.groups) {
+      // 跳过已逻辑删除的 group
+      if (serverGroup.isDeleted) {
+        continue;
+      }
       const localIndex = groups.value.findIndex(g => g.id === serverGroup.id);
       if (localIndex !== -1) {
-        if (serverGroup.updatedAt > groups.value[localIndex].updatedAt) {
+        const localGroup = groups.value[localIndex];
+        // 本地已逻辑删除 — 不接受服务端非删除的覆盖（防止复活）
+        if (localGroup.isDeleted && !serverGroup.isDeleted) {
+          continue;
+        }
+        if (serverGroup.updatedAt > localGroup.updatedAt) {
           groups.value[localIndex] = serverGroup;
         }
       } else {
@@ -1175,7 +1192,11 @@ async function triggerSync() {
   if (!syncEnabled || !syncServerUrl) return;
   if (syncPending) return;
   syncPending = true;
-  await onSyncTimerTick();
+  try {
+    await onSyncTimerTick();
+  } finally {
+    syncPending = false;
+  }
 }
 
 let syncEnabled = false;

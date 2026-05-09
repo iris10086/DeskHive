@@ -19,6 +19,7 @@ export interface TodoGroup {
   order: number;
   collapsed: boolean;
   updatedAt: number;
+  isDeleted?: boolean;
 }
 
 export interface DateInfo {

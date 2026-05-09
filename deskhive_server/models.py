@@ -22,6 +22,7 @@ class TodoGroup(BaseModel):
     order: int = 0
     collapsed: bool = False
     updated_at: int  # Last update time, for sync conflict detection
+    is_deleted: bool = False  # Soft delete for sync
 
 
 class SyncRequest(BaseModel):

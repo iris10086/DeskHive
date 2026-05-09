@@ -19,6 +19,7 @@ export interface TodoGroup {
   order: number; // 分组排序
   collapsed: boolean; // 是否折叠
   updatedAt: number; // 最后更新时间，Unix时间戳（秒），用于同步冲突检测
+  isDeleted?: boolean; // 逻辑删除标记，用于同步
 }
 
 export interface DateInfo {
