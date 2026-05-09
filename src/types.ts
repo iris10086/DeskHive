@@ -43,4 +43,5 @@ export interface AppSettings {
   enable_deadline_notification: boolean;
   notification_minutes_before: number;
   window_size: string; // 'small' | 'medium' | 'large'
+  click_through: boolean; // 鼠标穿透
 }

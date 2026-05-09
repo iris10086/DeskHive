@@ -140,6 +140,19 @@
             </div>
             <div class="setting-item">
               <div>
+                <div class="setting-label">鼠标穿透</div>
+                <div class="setting-description">开启后点击窗口将穿透到下层，无法交互。配合置顶用于长时间展示</div>
+              </div>
+              <div class="setting-control">
+                <div
+                  class="toggle-switch"
+                  :class="{ active: settings.click_through }"
+                  @click="settings.click_through = !settings.click_through"
+                ></div>
+              </div>
+            </div>
+            <div class="setting-item">
+              <div>
                 <div class="setting-label">窗口层级</div>
                 <div class="setting-description">选择窗口显示在顶层还是桌面层</div>
               </div>
@@ -569,6 +582,7 @@ interface AppSettings {
   window_size: string
   sync_enabled: boolean
   sync_server_url: string
+  click_through: boolean
 }
 
 type SectionKey = 'appearance' | 'behavior' | 'tasks' | 'sync' | 'help' | 'contact' | 'about'
@@ -629,6 +643,7 @@ const settings = reactive<AppSettings>({
   window_size: 'medium',
   sync_enabled: false,
   sync_server_url: ''
+  click_through: false
 })
 
 // 透明度的计算属性，确保始终为数字类型
@@ -704,7 +719,8 @@ async function applyWindowLevel() {
       theme: settings.theme,
       priority_color: settings.priority_color,
       window_level: settings.window_level,
-      window_size: settings.window_size
+      window_size: settings.window_size,
+      click_through: settings.click_through
     }
     await invoke('save_app_settings', { settings: tempSettings })
   } catch (error) {
@@ -723,7 +739,8 @@ async function applyWindowSize() {
       theme: settings.theme,
       priority_color: settings.priority_color,
       window_level: settings.window_level,
-      window_size: settings.window_size
+      window_size: settings.window_size,
+      click_through: settings.click_through
     }
     await invoke('save_app_settings', { settings: tempSettings })
   } catch (error) {
@@ -756,12 +773,13 @@ async function saveSettingsImmediately() {
       window_level: settings.window_level,
       timeline_deadline_priority: Boolean(settings.timeline_deadline_priority),
       enable_deadline_notification: Boolean(settings.enable_deadline_notification),
-      notification_minutes_before: typeof settings.notification_minutes_before === 'string' 
-        ? parseInt(settings.notification_minutes_before) 
+      notification_minutes_before: typeof settings.notification_minutes_before === 'string'
+        ? parseInt(settings.notification_minutes_before)
         : settings.notification_minutes_before,
       window_size: settings.window_size,
       sync_enabled: Boolean(settings.sync_enabled),
       sync_server_url: settings.sync_server_url || ''
+      click_through: Boolean(settings.click_through)
     }
     
     // 调用 Tauri 命令保存设置

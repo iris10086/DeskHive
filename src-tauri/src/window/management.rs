@@ -1,6 +1,7 @@
 use tauri::{Manager};
 
 use crate::data::load_app_settings;
+use crate::window::click_through::set_click_through;
 
 // Tauri 命令：显示/隐藏主窗口
 #[tauri::command]
@@ -39,6 +40,8 @@ pub async fn toggle_main_window(app: tauri::AppHandle) -> Result<(), String> {
                         }
                     }
                 }
+                // 重新应用鼠标穿透设置
+                let _ = set_click_through(&window, settings.click_through);
             }
             Err(_) => {
                 let _ = window.show();
@@ -54,7 +57,7 @@ pub async fn toggle_main_window(app: tauri::AppHandle) -> Result<(), String> {
                         use windows::Win32::UI::WindowsAndMessaging::{
                             SetWindowPos, HWND_BOTTOM, SWP_NOMOVE, SWP_NOSIZE, SWP_NOACTIVATE
                         };
-                        
+
                         if let Ok(hwnd) = window.hwnd() {
                             unsafe {
                                 let window_hwnd = HWND(hwnd.0 as _);
@@ -68,6 +71,8 @@ pub async fn toggle_main_window(app: tauri::AppHandle) -> Result<(), String> {
                         }
                     }
                 }
+                // 重新应用鼠标穿透设置
+                let _ = set_click_through(&window, settings.click_through);
             }
         }
     }
@@ -114,6 +119,9 @@ pub async fn show_main_window(app: tauri::AppHandle) -> Result<(), String> {
                     }
                 }
             }
+
+        // 重新应用鼠标穿透设置
+        let _ = set_click_through(&window, settings.click_through);
         }
         
         // 非 Windows 平台使用 Tauri 的 set_focus
@@ -165,6 +173,8 @@ pub async fn restore_from_tray(app: tauri::AppHandle) -> Result<(), String> {
                 }
             }
         }
+        // 重新应用鼠标穿透设置
+        let _ = set_click_through(&window, settings.click_through);
     }
     Ok(())
 }

@@ -31,6 +31,8 @@ pub struct AppSettings {
     pub sync_enabled: bool, // 是否启用多端同步
     #[serde(default = "default_sync_server_url")]
     pub sync_server_url: String, // 同步服务器地址
+    #[serde(default = "default_click_through")]
+    pub click_through: bool, // 鼠标穿透
 }
 
 impl Default for AppSettings {
@@ -51,6 +53,7 @@ impl Default for AppSettings {
             window_size: "medium".to_string(),
             sync_enabled: false,
             sync_server_url: "".to_string(),
+            click_through: false,
         }
     }
 }
@@ -106,4 +109,6 @@ pub fn default_sync_enabled() -> bool {
 
 pub fn default_sync_server_url() -> String {
     "".to_string()
+pub fn default_click_through() -> bool {
+    false
 }

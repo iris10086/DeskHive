@@ -5,6 +5,7 @@ use tauri::{Manager, Emitter};
 use crate::models::AppSettings;
 use crate::system::auto_start::set_auto_start;
 use crate::window::opacity::set_window_opacity;
+use crate::window::click_through::set_click_through;
 
 // 获取数据目录路径
 fn get_data_dir(app: &tauri::AppHandle) -> Result<std::path::PathBuf, String> {
@@ -119,8 +120,11 @@ pub async fn save_app_settings(app: tauri::AppHandle, settings: AppSettings) -> 
         
         // 通知前端更新拖动设置
         let _ = main_window.emit("drag-setting-changed", settings.disable_drag);
+
+        // 应用鼠标穿透设置
+        let _ = set_click_through(&main_window, settings.click_through);
     }
-    
+
     Ok(())
 }
 
@@ -149,6 +153,7 @@ pub async fn load_app_settings(app: tauri::AppHandle) -> Result<AppSettings, Str
             window_size: "medium".to_string(),
             sync_enabled: false,
             sync_server_url: "".to_string(),
+            click_through: false,
         });
     }
     

@@ -23,7 +23,7 @@ mod notification;
 
 // 重新导出需要的类型和函数
 use data::{
-    save_todo_data, 
+    save_todo_data,
     load_todo_data,
     set_todo_deadline,
     update_todo_text,
@@ -39,6 +39,7 @@ use data::{
     save_window_position,
     load_window_position,
 };
+use window::click_through::set_click_through;
 
 // 创建一个全局变量来跟踪Win+D状态
 static WIN_D_PRESSED: AtomicBool = AtomicBool::new(false);
@@ -529,6 +530,7 @@ pub fn run() {
                     let opacity_value = settings.opacity;
                     let window_level = settings.window_level.clone();
                     let window_size = settings.window_size.clone();
+                    let click_through = settings.click_through;
                     tauri::async_runtime::spawn(async move {
                         tokio::time::sleep(std::time::Duration::from_millis(100)).await;
                         
@@ -590,6 +592,13 @@ pub fn run() {
                                 let _ = window_for_settings.set_always_on_top(false);
                                 println!("应用窗口层级: 普通");
                             }
+                        }
+
+                        // 应用鼠标穿透设置
+                        if let Err(e) = set_click_through(&window_for_settings, click_through) {
+                            println!("应用启动鼠标穿透失败: {}", e);
+                        } else {
+                            println!("成功应用启动鼠标穿透: {}", click_through);
                         }
                     });
                 }
