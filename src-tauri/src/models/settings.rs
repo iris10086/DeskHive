@@ -109,6 +109,7 @@ pub fn default_sync_enabled() -> bool {
 
 pub fn default_sync_server_url() -> String {
     "".to_string()
+}
 pub fn default_click_through() -> bool {
     false
 }
