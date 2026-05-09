@@ -27,6 +27,8 @@ pub struct AppSettings {
     pub notification_minutes_before: u32, // 提前多少分钟通知
     #[serde(default = "default_window_size")]
     pub window_size: String, // 窗口尺寸：small | medium | large
+    #[serde(default = "default_click_through")]
+    pub click_through: bool, // 鼠标穿透
 }
 
 impl Default for AppSettings {
@@ -45,6 +47,7 @@ impl Default for AppSettings {
             enable_deadline_notification: false,
             notification_minutes_before: 30,
             window_size: "medium".to_string(),
+            click_through: false,
         }
     }
 }
@@ -92,4 +95,8 @@ pub fn default_notification_minutes_before() -> u32 {
 
 pub fn default_window_size() -> String {
     "medium".to_string()
+}
+
+pub fn default_click_through() -> bool {
+    false
 }
