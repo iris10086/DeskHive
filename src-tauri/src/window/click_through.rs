@@ -1,5 +1,9 @@
 #[cfg(target_os = "windows")]
-use windows::Win32::UI::WindowsAndMessaging::{SetWindowLongPtrW, GetWindowLongPtrW, GWL_EXSTYLE, WS_EX_LAYERED, WS_EX_TRANSPARENT};
+use windows::Win32::UI::WindowsAndMessaging::{
+    SetWindowLongPtrW, GetWindowLongPtrW, SetWindowPos,
+    GWL_EXSTYLE, WS_EX_LAYERED, WS_EX_TRANSPARENT,
+    SWP_NOMOVE, SWP_NOSIZE, SWP_NOACTIVATE, SWP_NOZORDER, SWP_FRAMECHANGED,
+};
 #[cfg(target_os = "windows")]
 use windows::Win32::Foundation::HWND;
 #[cfg(target_os = "windows")]
@@ -28,6 +32,15 @@ pub fn set_click_through(window: &tauri::WebviewWindow, enabled: bool) -> Result
                 let new_style = (ex_style as u32 & !WS_EX_TRANSPARENT.0) | WS_EX_LAYERED.0;
                 SetWindowLongPtrW(hwnd, GWL_EXSTYLE, new_style as isize);
             }
+
+            // 必须调用 SetWindowPos 并带上 SWP_FRAMECHANGED 标志，
+            // 否则 SetWindowLongPtrW 的样式修改不会立即生效
+            SetWindowPos(
+                hwnd,
+                HWND::default(),
+                0, 0, 0, 0,
+                SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_NOZORDER | SWP_FRAMECHANGED,
+            );
         }
     }
 
