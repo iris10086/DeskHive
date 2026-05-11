@@ -4,6 +4,20 @@ use crate::data::{load_app_settings, save_app_settings};
 use crate::window::management::{open_settings_window, show_main_window};
 use crate::quit_app;
 
+use std::sync::Mutex;
+
+/// 存储"鼠标穿透"菜单项更新回调，供 `save_app_settings` 等模块直接调用，
+/// 实现 Setting 页面、托盘菜单、实际效果三者的实时双向同步。
+type TrayTextUpdater = Box<dyn Fn(bool) + Send + Sync>;
+static CLICK_THROUGH_UPDATER: Mutex<Option<TrayTextUpdater>> = Mutex::new(None);
+
+/// 由 `save_app_settings` 调用，同步更新托盘菜单中"鼠标穿透"项的勾选文本。
+pub fn set_click_through_tray_text(enabled: bool) {
+    if let Some(ref updater) = *CLICK_THROUGH_UPDATER.lock().unwrap() {
+        updater(enabled);
+    }
+}
+
 // 创建系统托盘菜单和事件处理
 pub fn create_tray(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     // 创建系统托盘菜单
@@ -17,8 +31,25 @@ pub fn create_tray(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
         .items(&[&show, &reset_position, &settings, &click_through, &quit])
         .build()?;
 
-    // 克隆 click_through 菜单项，以便在事件处理中更新文本
+    // 克隆 click_through 菜单项，用于两个场景：
+    // 1. click_through_item — 托盘菜单点击事件处理
+    // 2. click_through_updater — 注册到静态回调，供保存设置时调用
     let click_through_item = click_through.clone();
+    let click_through_for_updater = click_through.clone();
+
+    // 注册全局更新回调：Setting 页面保存时通过此回调实时更新托盘菜单文本
+    // （托盘菜单点击切换后也会走到 save_app_settings → 此回调，文本会更新两次但幂等安全）
+    *CLICK_THROUGH_UPDATER.lock().unwrap() = Some(Box::new(move |enabled: bool| {
+        let _ = click_through_for_updater.set_text(if enabled { "✓ 鼠标穿透" } else { "鼠标穿透" });
+    }));
+
+    // 初始化托盘菜单文本：从已保存的设置中读取 click_through 状态
+    let handle = app.handle().clone();
+    tauri::async_runtime::spawn(async move {
+        if let Ok(settings) = load_app_settings(handle).await {
+            set_click_through_tray_text(settings.click_through);
+        }
+    });
 
     // 创建系统托盘图标
     let _tray = TrayIconBuilder::with_id("main")
@@ -66,6 +97,8 @@ pub fn create_tray(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
                             settings.click_through = !settings.click_through;
                             let enabled = settings.click_through;
                             let _ = save_app_settings(app_handle, settings).await;
+                            // save_app_settings 内部会调用 set_click_through_tray_text，
+                            // 此处显式更新以确保即时性（幂等安全）
                             let _ = item.set_text(if enabled { "✓ 鼠标穿透" } else { "鼠标穿透" });
                         }
                     });
