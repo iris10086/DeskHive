@@ -29,7 +29,3 @@ tokio = { version = "1", features = ["time"] }
 raw-window-handle = "0.6"
 chrono = { version = "0.4", features = ["serde"] }
 uuid = { version = "1.0", features = ["v4"] }
-
-# Patch tao to fix flush_paint_messages assertion panic on Windows
-# See: https://github.com/tauri-apps/tao/issues/1140
-

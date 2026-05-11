@@ -140,19 +140,6 @@
             </div>
             <div class="setting-item">
               <div>
-                <div class="setting-label">鼠标穿透</div>
-                <div class="setting-description">开启后点击窗口将穿透到下层，无法交互。配合置顶用于长时间展示</div>
-              </div>
-              <div class="setting-control">
-                <div
-                  class="toggle-switch"
-                  :class="{ active: settings.click_through }"
-                  @click="settings.click_through = !settings.click_through"
-                ></div>
-              </div>
-            </div>
-            <div class="setting-item">
-              <div>
                 <div class="setting-label">窗口层级</div>
                 <div class="setting-description">选择窗口显示在顶层还是桌面层</div>
               </div>
